@@ -1,0 +1,72 @@
+[
+  {
+    "id": "demo-user",
+    "name": "John Doe",
+    "age": 40,
+    "current_cash": 30000,
+    "investment_assets": 250000,
+    "yearly_savings_rate": 0.15,
+    "salary": 96000,
+    "portfolio": { "stocks": 0.7, "bonds": 0.3 },
+    "risk_appetite": "medium",
+    "target_retire_age": 65,
+    "target_monthly_income": 4000,
+    "description": "Balanced approach with moderate risk tolerance"
+  },
+  {
+    "id": "young-professional",
+    "name": "Sarah Chen",
+    "age": 28,
+    "current_cash": 15000,
+    "investment_assets": 45000,
+    "yearly_savings_rate": 0.2,
+    "salary": 75000,
+    "portfolio": { "stocks": 0.85, "bonds": 0.15 },
+    "risk_appetite": "high",
+    "target_retire_age": 60,
+    "target_monthly_income": 5000,
+    "description": "Young professional with aggressive growth strategy"
+  },
+  {
+    "id": "mid-career",
+    "name": "Michael Rodriguez",
+    "age": 45,
+    "current_cash": 50000,
+    "investment_assets": 400000,
+    "yearly_savings_rate": 0.18,
+    "salary": 120000,
+    "portfolio": { "stocks": 0.65, "bonds": 0.25, "real_estate": 0.1 },
+    "risk_appetite": "medium",
+    "target_retire_age": 62,
+    "target_monthly_income": 6000,
+    "description": "Mid-career professional with diversified portfolio"
+  },
+  {
+    "id": "conservative-saver",
+    "name": "Linda Thompson",
+    "age": 55,
+    "current_cash": 80000,
+    "investment_assets": 600000,
+    "yearly_savings_rate": 0.12,
+    "salary": 85000,
+    "portfolio": { "stocks": 0.4, "bonds": 0.5, "cash": 0.1 },
+    "risk_appetite": "low",
+    "target_retire_age": 67,
+    "target_monthly_income": 4500,
+    "description": "Conservative approach nearing retirement"
+  },
+  {
+    "id": "high-earner",
+    "name": "David Kim",
+    "age": 38,
+    "current_cash": 100000,
+    "investment_assets": 800000,
+    "yearly_savings_rate": 0.25,
+    "salary": 180000,
+    "portfolio": { "stocks": 0.7, "bonds": 0.2, "alternatives": 0.1 },
+    "risk_appetite": "high",
+    "target_retire_age": 55,
+    "target_monthly_income": 8000,
+    "description": "High earner targeting early retirement"
+  }
+]

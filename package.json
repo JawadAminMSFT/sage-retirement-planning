@@ -1,0 +1,35 @@
+{
+  "name": "sage-retirement-planning",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev -p 3847",
+    "lint": "next lint",
+    "start": "next start -p 3847",
+    "dev:full": "concurrently \"npm run dev\" \"npm run backend:dev\"",
+    "backend:dev": "cd backend && uv run python main.py",
+    "backend:install": "cd backend && uv sync",
+    "backend:update": "cd backend && uv sync",
+    "backend:test": "cd backend && uv run pytest tests/ -v",
+    "setup": "npm install && npm run backend:install"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.454.0",
+    "next": "15.2.4",
+    "react": "^19",
+    "react-dom": "^19",
+    "tailwind-merge": "^2.5.5",
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "concurrently": "^9.1.0",
+    "postcss": "^8.5",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5"
+  }
+}

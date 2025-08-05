@@ -1,0 +1,24 @@
+services:
+  frontend:
+    build: .
+    ports:
+      - "3847:3847"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8172
+      - PORT=3847
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    ports:
+      - "8172:8172"
+    environment:
+      - PORT=8172
+      - ENVIRONMENT=development
+      - CORS_ORIGINS=http://localhost:3847
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/app
+    command: uv run uvicorn main:app --host 0.0.0.0 --port 8172 --reload

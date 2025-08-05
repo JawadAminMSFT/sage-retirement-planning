@@ -1,0 +1,172 @@
+{
+  "products_by_risk": {
+    "low": [
+      {
+        "name": "Vanguard Total Bond Market ETF (BND)",
+        "exp_return": 0.042,
+        "risk_rating": "low",
+        "asset_class": "bonds",
+        "description": "Tracks the Bloomberg U.S. Aggregate Float Adjusted Index, providing broad exposure to U.S. investment-grade bonds",
+        "expense_ratio": 0.0003,
+        "minimum_investment": 1000
+      },
+      {
+        "name": "iShares 1-3 Year Treasury Bond ETF (SHY)",
+        "exp_return": 0.028,
+        "risk_rating": "low",
+        "asset_class": "government_bonds",
+        "description": "Tracks short-term U.S. Treasury bonds with 1-3 year maturities, offering high liquidity and low duration risk",
+        "expense_ratio": 0.0015,
+        "minimum_investment": 500
+      },
+      {
+        "name": "Vanguard Short-Term Corporate Bond ETF (VCSH)",
+        "exp_return": 0.038,
+        "risk_rating": "low",
+        "asset_class": "corporate_bonds",
+        "description": "Invests in high-quality corporate bonds with 1-5 year maturities, providing slightly higher yield than Treasuries",
+        "expense_ratio": 0.0004,
+        "minimum_investment": 1000
+      },
+      {
+        "name": "Fidelity Government Money Market Fund (SPAXX)",
+        "exp_return": 0.022,
+        "risk_rating": "very_low",
+        "asset_class": "cash_equivalents",
+        "description": "Invests in U.S. government securities and repurchase agreements, providing capital preservation and liquidity",
+        "expense_ratio": 0.0042,
+        "minimum_investment": 100
+      },
+      {
+        "name": "iShares TIPS Bond ETF (SCHP)",
+        "exp_return": 0.035,
+        "risk_rating": "low",
+        "asset_class": "inflation_protected",
+        "description": "Tracks U.S. Treasury Inflation-Protected Securities (TIPS) to provide inflation protection and real returns",
+        "expense_ratio": 0.0005,
+        "minimum_investment": 1000
+      }
+    ],
+    "medium": [
+      {
+        "name": "Vanguard Balanced Index Fund (VBIAX)",
+        "exp_return": 0.068,
+        "risk_rating": "medium",
+        "asset_class": "balanced",
+        "description": "60% stocks/40% bonds allocation providing balanced growth and income with automatic rebalancing",
+        "expense_ratio": 0.0007,
+        "minimum_investment": 3000
+      },
+      {
+        "name": "Schwab Target Date 2060 Fund (SWYNX)",
+        "exp_return": 0.075,
+        "risk_rating": "medium",
+        "asset_class": "target_date",
+        "description": "Age-appropriate diversified portfolio that automatically adjusts allocation as retirement approaches",
+        "expense_ratio": 0.0008,
+        "minimum_investment": 1000
+      },
+      {
+        "name": "Vanguard Total International Stock ETF (VTIAX)",
+        "exp_return": 0.071,
+        "risk_rating": "medium",
+        "asset_class": "international_equity",
+        "description": "Broad exposure to developed and emerging international markets outside the U.S. for global diversification",
+        "expense_ratio": 0.0008,
+        "minimum_investment": 3000
+      },
+      {
+        "name": "iShares Core S&P 500 ETF (IVV)",
+        "exp_return": 0.078,
+        "risk_rating": "medium",
+        "asset_class": "large_cap_equity",
+        "description": "Tracks the S&P 500 index, providing exposure to 500 of the largest U.S. companies",
+        "expense_ratio": 0.0003,
+        "minimum_investment": 1000
+      },
+      {
+        "name": "Fidelity Total Market Index Fund (FZROX)",
+        "exp_return": 0.076,
+        "risk_rating": "medium",
+        "asset_class": "total_market_equity",
+        "description": "Zero-fee fund tracking the entire U.S. stock market from large-cap to small-cap companies",
+        "expense_ratio": 0.0000,
+        "minimum_investment": 0
+      }
+    ],
+    "high": [
+      {
+        "name": "Vanguard Growth ETF (VUG)",
+        "exp_return": 0.089,
+        "risk_rating": "medium-high",
+        "asset_class": "growth_equity",
+        "description": "Focuses on large-cap U.S. growth stocks with strong earnings potential and above-average growth rates",
+        "expense_ratio": 0.0004,
+        "minimum_investment": 1000
+      },
+      {
+        "name": "iShares MSCI Emerging Markets ETF (EEM)",
+        "exp_return": 0.095,
+        "risk_rating": "high",
+        "asset_class": "emerging_markets",
+        "description": "Exposure to large and mid-cap stocks in emerging market countries with higher growth potential",
+        "expense_ratio": 0.0068,
+        "minimum_investment": 1000
+      },
+      {
+        "name": "Vanguard Small-Cap ETF (VB)",
+        "exp_return": 0.092,
+        "risk_rating": "high",
+        "asset_class": "small_cap_equity",
+        "description": "Invests in small-cap U.S. companies with higher growth potential but increased volatility",
+        "expense_ratio": 0.0005,
+        "minimum_investment": 1000
+      },
+      {
+        "name": "Technology Select Sector SPDR Fund (XLK)",
+        "exp_return": 0.105,
+        "risk_rating": "very_high",
+        "asset_class": "sector_equity",
+        "description": "Concentrated exposure to technology companies including software, hardware, and semiconductor firms",
+        "expense_ratio": 0.0010,
+        "minimum_investment": 1000
+      },
+      {
+        "name": "ARK Innovation ETF (ARKK)",
+        "exp_return": 0.118,
+        "risk_rating": "very_high",
+        "asset_class": "disruptive_innovation",
+        "description": "Actively managed fund investing in companies driving disruptive innovation across genomics, AI, and automation",
+        "expense_ratio": 0.0075,
+        "minimum_investment": 1000
+      },
+      {
+        "name": "Invesco QQQ Trust ETF (QQQ)",
+        "exp_return": 0.096,
+        "risk_rating": "high",
+        "asset_class": "growth_equity",
+        "description": "Tracks the NASDAQ-100 index, heavily weighted toward large technology and growth companies",
+        "expense_ratio": 0.0020,
+        "minimum_investment": 1000
+      },
+      {
+        "name": "iShares Russell 2000 Growth ETF (IWO)",
+        "exp_return": 0.094,
+        "risk_rating": "high",
+        "asset_class": "small_cap_growth",
+        "description": "Focuses on small-cap growth companies with strong earnings acceleration and revenue growth",
+        "expense_ratio": 0.0024,
+        "minimum_investment": 1000
+      },
+      {
+        "name": "First Trust Cloud Computing ETF (SKYY)",
+        "exp_return": 0.102,
+        "risk_rating": "very_high",
+        "asset_class": "thematic_technology",
+        "description": "Invests in companies involved in cloud computing infrastructure, platforms, and software services",
+        "expense_ratio": 0.0060,
+        "minimum_investment": 1000
+      }
+    ]
+  }
+}
