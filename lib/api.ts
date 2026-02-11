@@ -451,4 +451,220 @@ export const projectScenario = async (
   }
 }
 
+// ─── Conversation Storage API ───────────────────────────────────────────────
+
+export interface ConversationMessage {
+  id?: string
+  role: "user" | "assistant"
+  content: string
+  timestamp?: string
+}
+
+export interface ConversationSummary {
+  id: string
+  title: string
+  message_count: number
+  created_at: string
+  updated_at: string
+  preview: string
+}
+
+export interface Conversation {
+  id: string
+  user_id: string
+  title: string
+  messages: ConversationMessage[]
+  created_at: string
+  updated_at: string
+}
+
+export const listConversations = async (userId: string): Promise<ConversationSummary[]> => {
+  if (currentApiMode === "mock") {
+    await simulateDelay(200)
+    // Return empty for mock mode - conversations stored in memory
+    return []
+  }
+
+  try {
+    const response = await makeApiCall(`/api/conversations/${userId}`)
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+    const data = await response.json()
+    return data.conversations || []
+  } catch (error) {
+    console.error("Failed to list conversations:", error)
+    return []
+  }
+}
+
+export const getConversation = async (userId: string, conversationId: string): Promise<Conversation | null> => {
+  if (currentApiMode === "mock") {
+    return null
+  }
+
+  try {
+    const response = await makeApiCall(`/api/conversations/${userId}/${conversationId}`)
+    if (!response.ok) return null
+    return await response.json()
+  } catch (error) {
+    console.error("Failed to get conversation:", error)
+    return null
+  }
+}
+
+export const saveConversation = async (
+  userId: string,
+  title: string,
+  messages: ConversationMessage[],
+  conversationId?: string
+): Promise<string | null> => {
+  if (currentApiMode === "mock") {
+    return null // Mock mode doesn't persist
+  }
+
+  try {
+    const url = conversationId
+      ? `/api/conversations/${userId}/${conversationId}`
+      : `/api/conversations/${userId}`
+    const method = conversationId ? "PUT" : "POST"
+
+    const response = await makeApiCall(url, {
+      method,
+      body: JSON.stringify({
+        user_id: userId,
+        conversation_id: conversationId,
+        title,
+        messages: messages.map(m => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+          timestamp: m.timestamp || new Date().toISOString()
+        }))
+      })
+    })
+
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+    const data = await response.json()
+    return data.id || conversationId
+  } catch (error) {
+    console.error("Failed to save conversation:", error)
+    return null
+  }
+}
+
+export const deleteConversation = async (userId: string, conversationId: string): Promise<boolean> => {
+  if (currentApiMode === "mock") {
+    return false
+  }
+
+  try {
+    const response = await makeApiCall(`/api/conversations/${userId}/${conversationId}`, {
+      method: "DELETE"
+    })
+    return response.ok
+  } catch (error) {
+    console.error("Failed to delete conversation:", error)
+    return false
+  }
+}
+
+// ─── Scenario Storage API ───────────────────────────────────────────────────
+
+export interface SavedScenarioSummary {
+  id: string
+  name: string
+  description: string
+  timeframe_months: number
+  created_at: string
+  total_change_percent: number
+}
+
+export interface SavedScenario {
+  id: string
+  user_id: string
+  name: string
+  description: string
+  timeframe_months: number
+  projection_result: ScenarioProjectionResponse
+  created_at: string
+}
+
+export const listSavedScenarios = async (userId: string): Promise<SavedScenarioSummary[]> => {
+  if (currentApiMode === "mock") {
+    await simulateDelay(200)
+    return []
+  }
+
+  try {
+    const response = await makeApiCall(`/api/saved-scenarios/${userId}`)
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+    const data = await response.json()
+    return data.scenarios || []
+  } catch (error) {
+    console.error("Failed to list scenarios:", error)
+    return []
+  }
+}
+
+export const getSavedScenario = async (userId: string, scenarioId: string): Promise<SavedScenario | null> => {
+  if (currentApiMode === "mock") {
+    return null
+  }
+
+  try {
+    const response = await makeApiCall(`/api/saved-scenarios/${userId}/${scenarioId}`)
+    if (!response.ok) return null
+    return await response.json()
+  } catch (error) {
+    console.error("Failed to get scenario:", error)
+    return null
+  }
+}
+
+export const saveScenario = async (
+  userId: string,
+  name: string,
+  description: string,
+  timeframeMonths: number,
+  projectionResult: ScenarioProjectionResponse
+): Promise<string | null> => {
+  if (currentApiMode === "mock") {
+    return null
+  }
+
+  try {
+    const response = await makeApiCall(`/api/saved-scenarios/${userId}`, {
+      method: "POST",
+      body: JSON.stringify({
+        name,
+        description,
+        timeframe_months: timeframeMonths,
+        projection_result: projectionResult
+      })
+    })
+
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+    const data = await response.json()
+    return data.id
+  } catch (error) {
+    console.error("Failed to save scenario:", error)
+    return null
+  }
+}
+
+export const deleteSavedScenario = async (userId: string, scenarioId: string): Promise<boolean> => {
+  if (currentApiMode === "mock") {
+    return false
+  }
+
+  try {
+    const response = await makeApiCall(`/api/saved-scenarios/${userId}/${scenarioId}`, {
+      method: "DELETE"
+    })
+    return response.ok
+  } catch (error) {
+    console.error("Failed to delete scenario:", error)
+    return false
+  }
+}
+
 export { API_BASE_URL, simulateDelay }

@@ -36,6 +36,9 @@ __pycache__/
 dist/
 build/
 
+# User data (conversations and scenarios)
+backend/data/user_data/
+
 # Logs
 *.log
 server.log

@@ -8,6 +8,7 @@ import os
 import json
 import time
 import asyncio
+import uuid
 from typing import Any, List, Dict, Optional
 from datetime import datetime
 from pathlib import Path
@@ -18,6 +19,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, ValidationError
 import uvicorn
+
+# Storage imports
+from storage import (
+    storage,
+    Conversation,
+    ConversationMessage,
+    SavedScenario,
+)
 
 # Azure AI Agents imports
 from azure.identity import DefaultAzureCredential
@@ -1320,6 +1329,185 @@ async def get_quick_scenarios():
           "What if I want to retire abroad?",
       ]
   }
+
+
+# ─── Conversation Storage Endpoints ──────────────────────────────────────────
+
+class SaveConversationRequest(BaseModel):
+    """Request to save a conversation."""
+    user_id: str
+    conversation_id: Optional[str] = None
+    title: str = "New Conversation"
+    messages: List[Dict[str, Any]]
+
+
+class AddMessageRequest(BaseModel):
+    """Request to add a message to a conversation."""
+    role: str  # "user" or "assistant"
+    content: str
+
+
+@app.get("/api/conversations/{user_id}")
+async def list_user_conversations(user_id: str):
+    """List all conversations for a user."""
+    conversations = await storage.list_conversations(user_id)
+    return {
+        "conversations": [
+            {
+                "id": c.id,
+                "title": c.title,
+                "message_count": len(c.messages),
+                "created_at": c.created_at,
+                "updated_at": c.updated_at,
+                "preview": c.messages[-1].content[:100] if c.messages else ""
+            }
+            for c in conversations
+        ]
+    }
+
+
+@app.get("/api/conversations/{user_id}/{conversation_id}")
+async def get_conversation(user_id: str, conversation_id: str):
+    """Get a specific conversation with all messages."""
+    conversation = await storage.get_conversation(user_id, conversation_id)
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return conversation.model_dump()
+
+
+@app.post("/api/conversations/{user_id}")
+async def create_conversation(user_id: str, request: SaveConversationRequest):
+    """Create a new conversation."""
+    messages = [
+        ConversationMessage(
+            role=m.get("role", "user"),
+            content=m.get("content", ""),
+            timestamp=m.get("timestamp", datetime.utcnow().isoformat())
+        )
+        for m in request.messages
+    ]
+    
+    conversation = Conversation(
+        user_id=user_id,
+        title=request.title,
+        messages=messages
+    )
+    
+    conversation_id = await storage.save_conversation(conversation)
+    return {"id": conversation_id, "message": "Conversation created"}
+
+
+@app.put("/api/conversations/{user_id}/{conversation_id}")
+async def update_conversation(user_id: str, conversation_id: str, request: SaveConversationRequest):
+    """Update an existing conversation."""
+    existing = await storage.get_conversation(user_id, conversation_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    
+    messages = [
+        ConversationMessage(
+            id=m.get("id", str(uuid.uuid4()) if 'uuid' in dir() else ""),
+            role=m.get("role", "user"),
+            content=m.get("content", ""),
+            timestamp=m.get("timestamp", datetime.utcnow().isoformat())
+        )
+        for m in request.messages
+    ]
+    
+    existing.title = request.title
+    existing.messages = messages
+    
+    await storage.save_conversation(existing)
+    return {"id": conversation_id, "message": "Conversation updated"}
+
+
+@app.post("/api/conversations/{user_id}/{conversation_id}/messages")
+async def add_message_to_conversation(user_id: str, conversation_id: str, request: AddMessageRequest):
+    """Add a message to an existing conversation."""
+    conversation = await storage.get_conversation(user_id, conversation_id)
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    
+    message = ConversationMessage(
+        role=request.role,
+        content=request.content
+    )
+    conversation.messages.append(message)
+    
+    await storage.save_conversation(conversation)
+    return {"message_id": message.id, "message": "Message added"}
+
+
+@app.delete("/api/conversations/{user_id}/{conversation_id}")
+async def delete_conversation(user_id: str, conversation_id: str):
+    """Delete a conversation."""
+    success = await storage.delete_conversation(user_id, conversation_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return {"message": "Conversation deleted"}
+
+
+# ─── Scenario Storage Endpoints ──────────────────────────────────────────────
+
+class SaveScenarioRequest(BaseModel):
+    """Request to save a scenario."""
+    name: str
+    description: str
+    timeframe_months: int
+    projection_result: Dict[str, Any]
+
+
+@app.get("/api/saved-scenarios/{user_id}")
+async def list_user_scenarios(user_id: str):
+    """List all saved scenarios for a user."""
+    scenarios = await storage.list_scenarios(user_id)
+    return {
+        "scenarios": [
+            {
+                "id": s.id,
+                "name": s.name,
+                "description": s.description,
+                "timeframe_months": s.timeframe_months,
+                "created_at": s.created_at,
+                "total_change_percent": s.projection_result.get("projection", {}).get("total_change_percent", 0)
+            }
+            for s in scenarios
+        ]
+    }
+
+
+@app.get("/api/saved-scenarios/{user_id}/{scenario_id}")
+async def get_saved_scenario(user_id: str, scenario_id: str):
+    """Get a specific saved scenario with full projection data."""
+    scenario = await storage.get_scenario(user_id, scenario_id)
+    if not scenario:
+        raise HTTPException(status_code=404, detail="Scenario not found")
+    return scenario.model_dump()
+
+
+@app.post("/api/saved-scenarios/{user_id}")
+async def save_scenario(user_id: str, request: SaveScenarioRequest):
+    """Save a new scenario."""
+    scenario = SavedScenario(
+        user_id=user_id,
+        name=request.name,
+        description=request.description,
+        timeframe_months=request.timeframe_months,
+        projection_result=request.projection_result
+    )
+    
+    scenario_id = await storage.save_scenario(scenario)
+    return {"id": scenario_id, "message": "Scenario saved"}
+
+
+@app.delete("/api/saved-scenarios/{user_id}/{scenario_id}")
+async def delete_saved_scenario(user_id: str, scenario_id: str):
+    """Delete a saved scenario."""
+    success = await storage.delete_scenario(user_id, scenario_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Scenario not found")
+    return {"message": "Scenario deleted"}
+
 
 if __name__ == "__main__":
   uvicorn.run(app, host="0.0.0.0", port=8172)
