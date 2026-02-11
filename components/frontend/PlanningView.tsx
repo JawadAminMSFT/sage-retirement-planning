@@ -122,9 +122,46 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
     }
   }, [selectedProfile, messages, currentConversationId])
   
+  // ── Save on unmount or navigation ──
+  
+  useEffect(() => {
+    // Save when component unmounts
+    return () => {
+      if (selectedProfile && getApiMode() === "live" && messages.length > 1) {
+        const title = messages.find(m => m.role === "user")?.content.slice(0, 50) || "Conversation"
+        const savedMessages = messages.map(m => ({
+          role: m.role,
+          content: m.content,
+          timestamp: new Date(m.timestamp).toISOString()
+        }))
+        // Fire and forget - can't await in cleanup
+        saveConversation(
+          selectedProfile.id,
+          title,
+          savedMessages,
+          currentConversationId || undefined
+        )
+      }
+    }
+  }, [selectedProfile, messages, currentConversationId])
+  
+  // ── Handle back with save ──
+  
+  const handleBack = useCallback(async () => {
+    // Save before navigating away
+    if (selectedProfile && getApiMode() === "live" && messages.length > 1) {
+      await autoSaveConversation()
+    }
+    onBack()
+  }, [selectedProfile, messages, autoSaveConversation, onBack])
+  
   // ── Handlers for conversation history ──
   
-  const handleNewConversation = () => {
+  const handleNewConversation = async () => {
+    // Save current conversation before starting new one
+    if (messages.length > 1 && selectedProfile && getApiMode() === "live") {
+      await autoSaveConversation()
+    }
     setCurrentConversationId(null)
     setMessages([{
       role: "assistant",
@@ -359,7 +396,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200/60 bg-white/60 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <button
-            onClick={onBack}
+            onClick={handleBack}
             className="md:hidden w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100"
           >
             <ArrowLeft className="w-5 h-5 text-gray-600" />
