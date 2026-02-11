@@ -70,6 +70,12 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   
+  // Use ref to track conversation ID for callbacks (avoids stale closure)
+  const conversationIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    conversationIdRef.current = currentConversationId
+  }, [currentConversationId])
+  
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -110,17 +116,21 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
       timestamp: new Date(m.timestamp).toISOString()
     }))
     
+    // Use ref to get current conversation ID (avoids stale closure)
+    const existingId = conversationIdRef.current
+    
     const id = await saveConversation(
       selectedProfile.id,
       title,
       savedMessages,
-      currentConversationId || undefined
+      existingId || undefined
     )
     
-    if (id && !currentConversationId) {
+    if (id && !existingId) {
       setCurrentConversationId(id)
+      conversationIdRef.current = id
     }
-  }, [selectedProfile, messages, currentConversationId])
+  }, [selectedProfile, messages])
   
   // ── Save on unmount or navigation ──
   
@@ -134,16 +144,16 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
           content: m.content,
           timestamp: new Date(m.timestamp).toISOString()
         }))
-        // Fire and forget - can't await in cleanup
+        // Fire and forget - can't await in cleanup. Use ref for current ID.
         saveConversation(
           selectedProfile.id,
           title,
           savedMessages,
-          currentConversationId || undefined
+          conversationIdRef.current || undefined
         )
       }
     }
-  }, [selectedProfile, messages, currentConversationId])
+  }, [selectedProfile, messages])
   
   // ── Handle back with save ──
   
@@ -162,7 +172,9 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
     if (messages.length > 1 && selectedProfile && getApiMode() === "live") {
       await autoSaveConversation()
     }
+    // Reset both state and ref
     setCurrentConversationId(null)
+    conversationIdRef.current = null
     setMessages([{
       role: "assistant",
       content: "Hello! I'm Sage, your AI retirement planning assistant. I can help you explore different retirement scenarios, analyze their outcomes, and recommend specific products and strategies. Try asking me something like 'What if I retire at 62 instead of 65?' or use one of the quick scenarios below.",
@@ -181,7 +193,9 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
     setLoadingHistory(false)
     
     if (conversation) {
+      // Set both state and ref
       setCurrentConversationId(conversation.id)
+      conversationIdRef.current = conversation.id
       setMessages(conversation.messages.map(m => ({
         role: m.role as "user" | "assistant",
         content: m.content,
