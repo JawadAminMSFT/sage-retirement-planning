@@ -154,8 +154,13 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
         isLoading={isProjecting}
         projection={projection}
         error={projectionError}
+        userId={selectedProfile?.id || "anonymous"}
         onSubmit={handleProjectScenario}
         onClose={handleExitProjection}
+        onLoadProjection={(loadedProjection) => {
+          setProjection(loadedProjection)
+          setProjectionError(null)
+        }}
       />
 
       <div className="max-w-5xl mx-auto p-6 space-y-6 pb-24 md:pb-6">

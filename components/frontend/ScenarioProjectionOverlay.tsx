@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import {
   Sparkles,
   X,
@@ -10,8 +10,20 @@ import {
   AlertTriangle,
   Lightbulb,
   Info,
+  History,
+  Save,
+  Trash2,
+  ChevronRight,
 } from "lucide-react"
 import type { ScenarioProjectionResponse } from "@/lib/api"
+import {
+  listSavedScenarios,
+  getSavedScenario,
+  saveScenario,
+  deleteSavedScenario,
+  type SavedScenarioSummary,
+  getApiMode,
+} from "@/lib/api"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -22,8 +34,10 @@ interface ScenarioProjectionOverlayProps {
   isLoading: boolean
   projection: ScenarioProjectionResponse | null
   error: string | null
+  userId: string
   onSubmit: (scenario: string, timeframeMonths: Timeframe) => void
   onClose: () => void
+  onLoadProjection?: (projection: ScenarioProjectionResponse) => void
 }
 
 // ─── Timeframe Button ───────────────────────────────────────────────────────
@@ -106,11 +120,69 @@ export const ScenarioProjectionOverlay: React.FC<ScenarioProjectionOverlayProps>
   isLoading,
   projection,
   error,
+  userId,
   onSubmit,
   onClose,
+  onLoadProjection,
 }) => {
   const [scenarioInput, setScenarioInput] = useState("")
   const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>(12)
+  const [showHistory, setShowHistory] = useState(false)
+  const [savedScenarios, setSavedScenarios] = useState<SavedScenarioSummary[]>([])
+  const [isSaving, setIsSaving] = useState(false)
+  const [loadingHistory, setLoadingHistory] = useState(false)
+
+  // Load saved scenarios when history panel opens
+  useEffect(() => {
+    if (showHistory && userId && getApiMode() === "live") {
+      setLoadingHistory(true)
+      listSavedScenarios(userId)
+        .then(setSavedScenarios)
+        .finally(() => setLoadingHistory(false))
+    }
+  }, [showHistory, userId])
+
+  const handleSaveScenario = async () => {
+    if (!projection || !userId || getApiMode() === "mock") return
+    
+    setIsSaving(true)
+    const name = scenarioInput || "Unnamed Scenario"
+    const id = await saveScenario(
+      userId,
+      name,
+      scenarioInput,
+      selectedTimeframe,
+      projection
+    )
+    setIsSaving(false)
+    
+    if (id) {
+      // Refresh list
+      const updated = await listSavedScenarios(userId)
+      setSavedScenarios(updated)
+    }
+  }
+
+  const handleLoadScenario = async (scenarioId: string) => {
+    if (!userId) return
+    
+    const scenario = await getSavedScenario(userId, scenarioId)
+    if (scenario && onLoadProjection) {
+      setScenarioInput(scenario.description)
+      setSelectedTimeframe(scenario.timeframe_months as Timeframe)
+      onLoadProjection(scenario.projection_result as ScenarioProjectionResponse)
+      setShowHistory(false)
+    }
+  }
+
+  const handleDeleteScenario = async (scenarioId: string) => {
+    if (!userId) return
+    
+    const success = await deleteSavedScenario(userId, scenarioId)
+    if (success) {
+      setSavedScenarios(prev => prev.filter(s => s.id !== scenarioId))
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -127,6 +199,8 @@ export const ScenarioProjectionOverlay: React.FC<ScenarioProjectionOverlayProps>
   }
 
   if (!isOpen) return null
+
+  const isLiveMode = getApiMode() === "live"
 
   return (
     <>
@@ -145,14 +219,97 @@ export const ScenarioProjectionOverlay: React.FC<ScenarioProjectionOverlayProps>
             </p>
           </div>
         </div>
-        <button
-          onClick={onClose}
-          className="flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
-        >
-          <X className="w-4 h-4" />
-          Exit
-        </button>
+        <div className="flex items-center gap-2">
+          {/* History Button */}
+          {isLiveMode && (
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                showHistory 
+                  ? "bg-white text-indigo-600" 
+                  : "bg-white/20 hover:bg-white/30"
+              }`}
+            >
+              <History className="w-4 h-4" />
+              History
+            </button>
+          )}
+          {/* Save Button */}
+          {isLiveMode && projection && (
+            <button
+              onClick={handleSaveScenario}
+              disabled={isSaving}
+              className="flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              Save
+            </button>
+          )}
+          {/* Exit Button */}
+          <button
+            onClick={onClose}
+            className="flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
+          >
+            <X className="w-4 h-4" />
+            Exit
+          </button>
+        </div>
       </div>
+
+      {/* History Panel */}
+      {showHistory && isLiveMode && (
+        <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
+          <div className="max-w-4xl mx-auto">
+            <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+              <History className="w-4 h-4" />
+              Saved Scenarios
+            </h3>
+            {loadingHistory ? (
+              <div className="flex items-center gap-2 text-gray-500 text-sm py-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading...
+              </div>
+            ) : savedScenarios.length === 0 ? (
+              <p className="text-sm text-gray-500 py-2">No saved scenarios yet. Run a projection and click Save to store it.</p>
+            ) : (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {savedScenarios.map((scenario) => (
+                  <div
+                    key={scenario.id}
+                    className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-gray-200 hover:border-indigo-300 transition-colors"
+                  >
+                    <button
+                      onClick={() => handleLoadScenario(scenario.id)}
+                      className="flex-1 text-left flex items-center gap-3"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800 truncate">{scenario.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {scenario.timeframe_months}M • {new Date(scenario.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <span className={`text-sm font-medium ${scenario.total_change_percent >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                        {scenario.total_change_percent >= 0 ? "+" : ""}{scenario.total_change_percent.toFixed(1)}%
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteScenario(scenario.id)}
+                      className="ml-2 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Input Bar */}
       <div className="bg-white border-b border-gray-200 px-4 py-4 shadow-sm">
