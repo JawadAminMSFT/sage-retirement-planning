@@ -748,6 +748,13 @@ async def evaluate_agent_run(thread_id: str, run_id: str) -> Optional[Dict[str, 
 # FastAPI app
 app = FastAPI(title="Retirement Planning API", version="1.0.0")
 
+# Include advisor and admin routers
+from advisor_routes import router as advisor_router
+from admin_routes import router as admin_router
+
+app.include_router(advisor_router)
+app.include_router(admin_router)
+
 app.add_middleware(
   CORSMiddleware,
   allow_origins=["*"],
@@ -768,6 +775,678 @@ async def health():
 async def get_profiles():
   """Get available user profiles"""
   return ProfilesResponse(profiles=SAMPLE_PROFILES)
+
+
+# ─── Advisor AI Chat Endpoints ───────────────────────────────────────────────
+
+# Import advisor storage for data enrichment
+from advisor_storage import advisor_storage as _advisor_store
+
+ADVISOR_SYSTEM_PROMPT = """You are Sage, an AI assistant for financial advisors. You help advisors manage their practice, 
+understand their clients' situations, and provide data-driven insights for retirement planning.
+
+You are NOT the client's advisor — you are a tool that helps the advisor do their job better.
+
+Current date: {today}
+
+## Advisor Profile
+Name: {advisor_name}
+License: {advisor_license}
+Jurisdictions: {advisor_jurisdictions}
+Specializations: {advisor_specializations}
+
+## Client Portfolio Summary
+{client_summaries}
+
+## Pending Escalations
+{escalation_summaries}
+
+## Upcoming Appointments
+{appointment_summaries}
+
+## Regulatory & Compliance Reference Data
+{regulatory_summaries}
+
+## Approved Investment Products
+{product_summaries}
+
+## Instructions
+- Respond in clear, professional markdown suitable for an advisor audience.
+- Use specific client names, numbers, and data from the context above.
+- For regulatory questions, specify which jurisdiction (US or CA) applies.
+- When discussing a specific client, reference their actual portfolio, age, goals, and status.
+- If asked for a daily brief, synthesize today's appointments, pending escalations, and at-risk clients into actionable insights.
+- For pre-meeting briefs, focus on the specific client's financial snapshot, recent activity, talking points, and risks.
+- Never invent client data that isn't in the context above.
+- Do NOT return JSON — respond in natural language with markdown formatting.
+
+## CRITICAL: Regulatory Citations
+Whenever you reference a specific regulatory rule, contribution limit, tax treatment, withdrawal rule, or government benefit from the Regulatory Reference Data above, you MUST cite it inline using the format: [REF:rule-id]
+
+Examples:
+- "The 2026 401(k) limit is $23,500 [REF:us-401k-limit-2026]"
+- "CPP standard retirement age is 65, with early claiming available at 60 [REF:ca-cpp-standard]"
+- "RMDs must begin at age 73 under SECURE 2.0 [REF:us-rmd-age]"
+
+Always cite the most specific rule. If multiple rules apply, cite each one separately.
+Only use [REF:id] for rules that exist in the Regulatory Reference Data — never fabricate a reference ID.
+"""
+
+
+async def _build_advisor_context(advisor_id: str) -> str:
+    """Build a rich context string with real advisor/client/escalation/appointment data."""
+    from datetime import datetime
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+
+    # Advisor profile
+    advisor = await _advisor_store.get_advisor(advisor_id)
+    advisor_name = advisor.name if advisor else advisor_id
+    advisor_license = advisor.license_number if advisor else "N/A"
+    advisor_jurisdictions = ", ".join([j.value if hasattr(j, 'value') else str(j) for j in (advisor.jurisdictions if advisor else [])])
+    advisor_specializations = ", ".join(advisor.specializations if advisor else [])
+    advisor_jurisdictions_list = [j.value if hasattr(j, 'value') else str(j) for j in (advisor.jurisdictions if advisor else [])]
+
+    # Clients
+    clients = await _advisor_store.get_clients_for_advisor(advisor_id)
+    client_lines = []
+    for c in clients:
+        total_assets = c.investment_assets + c.current_cash
+        jurisdiction = c.jurisdiction.value if hasattr(c.jurisdiction, 'value') else str(c.jurisdiction)
+        status = c.status.value if hasattr(c.status, 'value') else str(c.status)
+        portfolio_str = ", ".join(f"{k}: {v*100:.0f}%" for k, v in (c.portfolio or {}).items())
+        client_lines.append(
+            f"- **{c.name}** (ID: {c.id}) | Age {c.age} | {jurisdiction} | Status: {status} | "
+            f"Risk: {c.risk_appetite} | Assets: ${total_assets:,.0f} (cash ${c.current_cash:,.0f} + invested ${c.investment_assets:,.0f}) | "
+            f"Portfolio: [{portfolio_str}] | Savings rate: {c.yearly_savings_rate*100:.0f}% of ${c.salary:,.0f} salary | "
+            f"Target: retire at {c.target_retire_age}, ${c.target_monthly_income:,.0f}/mo income"
+        )
+    client_summaries = "\n".join(client_lines) if client_lines else "No clients assigned."
+
+    # Escalations
+    escalations = await _advisor_store.get_escalations_for_advisor(advisor_id)
+    esc_lines = []
+    for e in escalations:
+        status = e.status.value if hasattr(e.status, 'value') else str(e.status)
+        priority = e.priority.value if hasattr(e.priority, 'value') else str(e.priority)
+        # Find client name
+        client_name = e.client_id
+        for c in clients:
+            if c.id == e.client_id:
+                client_name = c.name
+                break
+        esc_lines.append(
+            f"- [{priority.upper()}] {client_name}: \"{e.client_question}\" (status: {status}, created: {e.created_at[:10]})"
+        )
+    escalation_summaries = "\n".join(esc_lines) if esc_lines else "No pending escalations."
+
+    # Appointments
+    appointments = await _advisor_store.get_appointments_for_advisor(advisor_id)
+    appt_lines = []
+    for a in appointments:
+        status = a.status.value if hasattr(a.status, 'value') else str(a.status)
+        meeting_type = a.meeting_type.value if hasattr(a.meeting_type, 'value') else str(a.meeting_type)
+        # Find client name
+        client_name = a.client_id
+        for c in clients:
+            if c.id == a.client_id:
+                client_name = c.name
+                break
+        is_today = a.scheduled_at[:10] == today
+        day_label = "TODAY" if is_today else a.scheduled_at[:10]
+        appt_lines.append(
+            f"- [{day_label}] {a.scheduled_at[11:16]} — {client_name} ({meeting_type}, {a.duration_minutes}min, {status})"
+            + (f"\n  Agenda: {a.agenda}" if a.agenda else "")
+        )
+    appointment_summaries = "\n".join(appt_lines) if appt_lines else "No upcoming appointments."
+
+    # Load regulatory rules
+    import os
+    data_dir = os.path.join(os.path.dirname(__file__), "data")
+    regulatory_summaries = "No regulatory data available."
+    try:
+        with open(os.path.join(data_dir, "regulatory_rules.json"), "r") as f:
+            all_rules = json.load(f)
+        # Filter to active rules for advisor's jurisdictions
+        relevant_rules = [r for r in all_rules if r.get("is_active", True) and r.get("jurisdiction") in advisor_jurisdictions_list]
+        rule_lines = []
+        for r in relevant_rules:
+            vals = r.get("current_values", {})
+            vals_str = ", ".join(f"{k}: {v}" for k, v in vals.items())
+            source = r.get("source_url", "")
+            rule_lines.append(
+                f"- **[{r['id']}]** {r['title']} ({r['jurisdiction']}, {r['category']}): {r['description']}\n"
+                f"  Values: {vals_str}\n"
+                f"  Source: {source}\n"
+                f"  Last verified: {r.get('last_verified', 'N/A')}"
+            )
+        regulatory_summaries = "\n".join(rule_lines) if rule_lines else "No regulatory rules for advisor's jurisdictions."
+    except Exception as e:
+        print(f"Warning: Could not load regulatory rules: {e}")
+
+    # Load investment products
+    product_summaries = "No product data available."
+    try:
+        with open(os.path.join(data_dir, "investment_products.json"), "r") as f:
+            products_data = json.load(f)
+        product_lines = []
+        for risk_level, products in products_data.get("products_by_risk", {}).items():
+            for p in products:
+                product_lines.append(
+                    f"- [{risk_level.upper()}] {p['name']}: {p['description']} "
+                    f"(exp. return: {p['exp_return']*100:.1f}%, expense ratio: {p['expense_ratio']*100:.2f}%, "
+                    f"min investment: ${p['minimum_investment']:,})"
+                )
+        product_summaries = "\n".join(product_lines) if product_lines else "No products in catalog."
+    except Exception as e:
+        print(f"Warning: Could not load investment products: {e}")
+
+    return ADVISOR_SYSTEM_PROMPT.format(
+        today=today,
+        advisor_name=advisor_name,
+        advisor_license=advisor_license,
+        advisor_jurisdictions=advisor_jurisdictions,
+        advisor_specializations=advisor_specializations,
+        client_summaries=client_summaries,
+        escalation_summaries=escalation_summaries,
+        appointment_summaries=appointment_summaries,
+        regulatory_summaries=regulatory_summaries,
+        product_summaries=product_summaries,
+    )
+
+
+class AdvisorChatRequest(BaseModel):
+    message: str
+    advisor_id: str
+    context: Optional[Dict[str, Any]] = None
+    history: Optional[List[ChatMessage]] = []
+
+
+class PreMeetingBriefRequest(BaseModel):
+    advisor_id: str
+    client_id: str
+    appointment_id: str
+
+
+PRE_MEETING_BRIEF_PROMPT = """Using the client data and context above, generate a structured pre-meeting brief for the upcoming appointment with client "{client_id}" (appointment "{appointment_id}").
+
+You MUST respond with ONLY valid JSON (no markdown, no code fences, no extra text). The JSON must follow this exact schema:
+
+{{
+  "client_summary": "A 2-3 sentence overview of the client's situation and retirement readiness.",
+  "financial_snapshot": {{
+    "total_assets": <number>,
+    "invested_assets": <number>,
+    "cash_reserves": <number>,
+    "annual_savings": <number>,
+    "savings_rate_percent": <number>,
+    "portfolio_allocation": {{ "stocks": <percent>, "bonds": <percent>, ... }},
+    "goal_progress_percent": <number 0-100>,
+    "risk_score": <number 0-100>,
+    "key_concerns": ["concern1", "concern2"]
+  }},
+  "talking_points": [
+    {{
+      "title": "Short topic title",
+      "detail": "1-2 sentence explanation of what to discuss",
+      "priority": "high" | "medium" | "low",
+      "category": "performance" | "contribution" | "tax" | "risk" | "planning" | "regulatory"
+    }}
+  ],
+  "risks": [
+    {{
+      "title": "Risk title",
+      "detail": "Brief risk description",
+      "severity": "high" | "medium" | "low"
+    }}
+  ],
+  "opportunities": [
+    {{
+      "title": "Opportunity title",
+      "detail": "Brief description of the opportunity",
+      "impact": "high" | "medium" | "low"
+    }}
+  ],
+  "meeting_agenda": [
+    "Agenda item 1",
+    "Agenda item 2"
+  ],
+  "regulatory_considerations": [
+    {{
+      "rule_id": "rule-id-if-applicable",
+      "title": "Rule or consideration title",
+      "detail": "Brief explanation of relevance to this client"
+    }}
+  ],
+  "recent_activity": {{
+    "scenarios_explored": ["scenario1", "scenario2"],
+    "questions_asked": ["question1", "question2"],
+    "last_login": "ISO date string or 'Unknown'"
+  }}
+}}
+
+Use REAL data from the client context above. Calculate goal_progress_percent using the 4% rule (target_monthly_income * 12 * 25 = target fund).
+Provide 3-5 talking points, 2-4 risks, 2-4 opportunities, and 4-6 agenda items.
+All numbers should be actual numbers (not strings). All arrays should have at least one item.
+Respond with ONLY the JSON object — no explanation, no markdown."""
+
+
+@app.post("/advisor/pre-meeting-brief")
+async def generate_pre_meeting_brief_endpoint(request: PreMeetingBriefRequest):
+    """Generate a structured pre-meeting brief using the LLM."""
+    try:
+        system_prompt = await _build_advisor_context(request.advisor_id)
+        user_message = PRE_MEETING_BRIEF_PROMPT.format(
+            client_id=request.client_id,
+            appointment_id=request.appointment_id,
+        )
+
+        thread = agents_client.threads.create()
+        agents_client.messages.create(
+            thread_id=thread.id,
+            role="user",
+            content=f"SYSTEM CONTEXT:\n{system_prompt}\n\n---\n\n{user_message}",
+        )
+
+        class TextHandler(AgentEventHandler):
+            def __init__(self):
+                super().__init__()
+                self.text = ""
+
+            def on_message_delta(self, delta: MessageDeltaChunk):
+                if delta.delta.content:
+                    for chunk in delta.delta.content:
+                        self.text += chunk.text.get("value", "")
+
+            def on_thread_run(self, run: ThreadRun):
+                if run.status == "requires_action" and isinstance(run.required_action, SubmitToolOutputsAction):
+                    tool_calls = run.required_action.submit_tool_outputs.tool_calls
+                    tool_outputs = []
+                    for tc in tool_calls:
+                        if tc.function.name == "get_product_catalogue":
+                            args = json.loads(tc.function.arguments) if tc.function.arguments else {}
+                            result = get_product_catalogue(args.get("risk", "medium"))
+                            tool_outputs.append(ToolOutput(tool_call_id=tc.id, output=result))
+                    if tool_outputs:
+                        agents_client.runs.submit_tool_outputs_stream(
+                            thread_id=run.thread_id, run_id=run.id,
+                            tool_outputs=tool_outputs, event_handler=self,
+                        )
+
+        handler = TextHandler()
+        with agents_client.runs.stream(
+            thread_id=thread.id, agent_id=agent.id, event_handler=handler,
+        ) as stream:
+            for _ in stream:
+                pass
+
+        # Parse the JSON response from the LLM
+        raw = handler.text.strip()
+        # Strip markdown code fences if the LLM added them despite instructions
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
+            if raw.endswith("```"):
+                raw = raw[:-3]
+            raw = raw.strip()
+
+        brief_data = json.loads(raw)
+        brief_data["id"] = f"brief-{request.appointment_id}"
+        brief_data["appointment_id"] = request.appointment_id
+        brief_data["generated_at"] = datetime.utcnow().isoformat() + "Z"
+
+        return brief_data
+
+    except json.JSONDecodeError as e:
+        print(f"Pre-meeting brief JSON parse error: {e}\nRaw response: {handler.text[:500]}")
+        raise HTTPException(status_code=502, detail="LLM returned invalid JSON for pre-meeting brief")
+    except Exception as e:
+        print(f"Pre-meeting brief error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class ScenarioAnalysisRequest(BaseModel):
+    advisor_id: str
+    clients: List[Dict[str, Any]]
+    scenario_type: str
+    scenario_description: str
+    scenario_params: Dict[str, Any]
+
+
+SCENARIO_ANALYSIS_PROMPT = """Using the advisor context above and the client data provided below, run a "{scenario_description}" scenario analysis.
+
+Scenario type: {scenario_type}
+Parameters: {scenario_params}
+
+Clients to analyze:
+{client_summaries}
+
+You MUST respond with ONLY valid JSON (no markdown, no code fences, no extra text). The JSON must follow this exact schema:
+
+{{
+  "headline": "<Short 5-8 word headline summarizing the overall scenario outcome>",
+  "overall_summary": "<2-3 sentence summary of cross-client insights and the overall impact of this scenario>",
+  "overall_recommendation": "<1-2 sentence portfolio-wide recommendation for the advisor>",
+  "client_analyses": [
+    {{
+      "client_id": "<client id>",
+      "client_name": "<client name>",
+      "current_outlook": {{
+        "success_rate": <number 0-100>,
+        "monthly_income": <number>,
+        "assessment": "<1 sentence current outlook summary>"
+      }},
+      "scenario_impact": {{
+        "direction": "positive" | "negative" | "neutral",
+        "success_rate_change": <number, can be negative>,
+        "new_success_rate": <number 0-100>,
+        "income_change": <number, can be negative>,
+        "new_monthly_income": <number>,
+        "summary": "<1-2 sentence description of impact>"
+      }},
+      "risk_level": "high" | "medium" | "low",
+      "recommendation": "<1-2 sentence specific actionable advice for this client>"
+    }}
+  ],
+  "key_insights": [
+    {{
+      "title": "<3-6 word insight title>",
+      "detail": "<1 sentence explanation>",
+      "type": "warning" | "info" | "success"
+    }}
+  ],
+  "suggested_actions": [
+    {{
+      "action": "<Specific action the advisor should take>",
+      "priority": "high" | "medium" | "low",
+      "affected_clients": ["<client_id1>", "<client_id2>"]
+    }}
+  ]
+}}
+
+Use realistic financial projections based on actual portfolio allocations, savings rates, and time horizons.
+Provide analysis for ALL clients listed above.
+All numbers should be actual numbers (not strings).
+Respond with ONLY the JSON object."""
+
+
+@app.post("/advisor/scenario-analysis")
+async def generate_scenario_analysis_endpoint(request: ScenarioAnalysisRequest):
+    """Generate a structured cross-client scenario analysis using the LLM."""
+    try:
+        system_prompt = await _build_advisor_context(request.advisor_id)
+
+        client_summaries = "\n".join([
+            f"- {c.get('name', c.get('id', 'Unknown'))} (ID: {c.get('id', 'unknown')}): "
+            f"age {c.get('age', 'N/A')}, {c.get('jurisdiction', 'N/A')}, "
+            f"{c.get('risk_appetite', 'medium')} risk, "
+            f"${c.get('investment_assets', 0) + c.get('current_cash', 0):,.0f} total assets, "
+            f"portfolio [{', '.join(f'{k}: {v*100:.0f}%' for k, v in c.get('portfolio', {}).items())}], "
+            f"saves {c.get('yearly_savings_rate', 0)*100:.0f}% of ${c.get('salary', 0):,.0f}, "
+            f"target retire at {c.get('target_retire_age', 65)} with ${c.get('target_monthly_income', 0):,.0f}/mo"
+            for c in request.clients
+        ])
+
+        user_message = SCENARIO_ANALYSIS_PROMPT.format(
+            scenario_description=request.scenario_description,
+            scenario_type=request.scenario_type,
+            scenario_params=json.dumps(request.scenario_params),
+            client_summaries=client_summaries,
+        )
+
+        thread = agents_client.threads.create()
+        agents_client.messages.create(
+            thread_id=thread.id,
+            role="user",
+            content=f"SYSTEM CONTEXT:\n{system_prompt}\n\n---\n\n{user_message}",
+        )
+
+        class TextHandler(AgentEventHandler):
+            def __init__(self):
+                super().__init__()
+                self.text = ""
+
+            def on_message_delta(self, delta: MessageDeltaChunk):
+                if delta.delta.content:
+                    for chunk in delta.delta.content:
+                        self.text += chunk.text.get("value", "")
+
+            def on_thread_run(self, run: ThreadRun):
+                if run.status == "requires_action" and isinstance(run.required_action, SubmitToolOutputsAction):
+                    tool_calls = run.required_action.submit_tool_outputs.tool_calls
+                    tool_outputs = []
+                    for tc in tool_calls:
+                        if tc.function.name == "get_product_catalogue":
+                            args = json.loads(tc.function.arguments) if tc.function.arguments else {}
+                            result = get_product_catalogue(args.get("risk", "medium"))
+                            tool_outputs.append(ToolOutput(tool_call_id=tc.id, output=result))
+                    if tool_outputs:
+                        agents_client.runs.submit_tool_outputs_stream(
+                            thread_id=run.thread_id, run_id=run.id,
+                            tool_outputs=tool_outputs, event_handler=self,
+                        )
+
+        handler = TextHandler()
+        with agents_client.runs.stream(
+            thread_id=thread.id, agent_id=agent.id, event_handler=handler,
+        ) as stream:
+            for _ in stream:
+                pass
+
+        raw = handler.text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
+            if raw.endswith("```"):
+                raw = raw[:-3]
+            raw = raw.strip()
+
+        analysis_data = json.loads(raw)
+        return analysis_data
+
+    except json.JSONDecodeError as e:
+        print(f"Scenario analysis JSON parse error: {e}\nRaw response: {handler.text[:500]}")
+        raise HTTPException(status_code=502, detail="LLM returned invalid JSON for scenario analysis")
+    except Exception as e:
+        print(f"Scenario analysis error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _load_regulatory_rules_map() -> Dict[str, Dict]:
+    """Load regulatory rules into a dict keyed by rule ID for citation lookup."""
+    import os
+    data_dir = os.path.join(os.path.dirname(__file__), "data")
+    try:
+        with open(os.path.join(data_dir, "regulatory_rules.json"), "r") as f:
+            rules = json.load(f)
+        return {r["id"]: r for r in rules}
+    except Exception:
+        return {}
+
+
+def _extract_citations(text: str) -> tuple:
+    """Extract [REF:rule-id] citations from LLM output.
+    Returns (clean_text, citations_list) where citations have title, source, rule_id, description.
+    """
+    import re
+    rules_map = _load_regulatory_rules_map()
+    pattern = re.compile(r'\[REF:([a-zA-Z0-9_-]+)\]')
+    found_ids = list(dict.fromkeys(pattern.findall(text)))  # unique, ordered
+
+    citations = []
+    for rule_id in found_ids:
+        rule = rules_map.get(rule_id)
+        if rule:
+            citations.append({
+                "id": rule_id,
+                "title": rule.get("title", rule_id),
+                "source": rule.get("source_url", ""),
+                "description": rule.get("description", ""),
+                "jurisdiction": rule.get("jurisdiction", ""),
+                "category": rule.get("category", ""),
+                "values": rule.get("current_values", {}),
+                "last_verified": rule.get("last_verified", ""),
+            })
+
+    return text, citations
+
+
+@app.post("/advisor/chat")
+async def advisor_chat(request: AdvisorChatRequest):
+    """Non-streaming advisor chat with real LLM and enriched context."""
+    try:
+        system_prompt = await _build_advisor_context(request.advisor_id)
+
+        # Create a dedicated thread for this advisor conversation
+        thread = agents_client.threads.create()
+
+        # Send system context + user message
+        agents_client.messages.create(
+            thread_id=thread.id,
+            role="user",
+            content=f"SYSTEM CONTEXT:\n{system_prompt}\n\n---\n\nADVISOR QUESTION:\n{request.message}",
+        )
+
+        # Run the agent and collect response
+        class TextHandler(AgentEventHandler):
+            def __init__(self):
+                super().__init__()
+                self.text = ""
+
+            def on_message_delta(self, delta: MessageDeltaChunk):
+                if delta.delta.content:
+                    for chunk in delta.delta.content:
+                        self.text += chunk.text.get("value", "")
+
+            def on_thread_run(self, run: ThreadRun):
+                if run.status == "requires_action" and isinstance(run.required_action, SubmitToolOutputsAction):
+                    tool_calls = run.required_action.submit_tool_outputs.tool_calls
+                    tool_outputs = []
+                    for tc in tool_calls:
+                        if tc.function.name == "get_product_catalogue":
+                            args = json.loads(tc.function.arguments) if tc.function.arguments else {}
+                            result = get_product_catalogue(args.get("risk", "medium"))
+                            tool_outputs.append(ToolOutput(tool_call_id=tc.id, output=result))
+                    if tool_outputs:
+                        agents_client.runs.submit_tool_outputs_stream(
+                            thread_id=run.thread_id, run_id=run.id,
+                            tool_outputs=tool_outputs, event_handler=self,
+                        )
+
+        handler = TextHandler()
+        with agents_client.runs.stream(
+            thread_id=thread.id, agent_id=agent.id, event_handler=handler,
+        ) as stream:
+            for _ in stream:
+                pass
+
+        clean_text, citations = _extract_citations(handler.text)
+        return {"response": clean_text, "citations": citations}
+
+    except Exception as e:
+        print(f"Advisor chat error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/advisor/chat/stream")
+async def advisor_chat_stream(request: AdvisorChatRequest):
+    """Streaming advisor chat — sends SSE events with type 'content' and 'complete'."""
+    try:
+        system_prompt = await _build_advisor_context(request.advisor_id)
+
+        # Create a dedicated thread for this advisor conversation
+        thread = agents_client.threads.create()
+
+        # Build full message with history context
+        history_text = ""
+        if request.history:
+            for msg in request.history[-10:]:  # Last 10 messages for context
+                role_label = "Advisor" if msg.role == "user" else "Sage"
+                history_text += f"{role_label}: {msg.content}\n\n"
+
+        full_message = f"SYSTEM CONTEXT:\n{system_prompt}\n\n"
+        if history_text:
+            full_message += f"CONVERSATION HISTORY:\n{history_text}\n---\n\n"
+        full_message += f"ADVISOR QUESTION:\n{request.message}"
+
+        agents_client.messages.create(
+            thread_id=thread.id,
+            role="user",
+            content=full_message,
+        )
+
+        async def generate():
+            accumulated = ""
+
+            class StreamHandler(AgentEventHandler):
+                def __init__(self):
+                    super().__init__()
+                    self.chunks = asyncio.Queue()
+                    self.done = False
+
+                def on_message_delta(self, delta: MessageDeltaChunk):
+                    if delta.delta.content:
+                        for chunk in delta.delta.content:
+                            text = chunk.text.get("value", "")
+                            if text:
+                                self.chunks.put_nowait(text)
+
+                def on_done(self):
+                    self.done = True
+
+                def on_thread_run(self, run: ThreadRun):
+                    if run.status == "requires_action" and isinstance(run.required_action, SubmitToolOutputsAction):
+                        tool_calls = run.required_action.submit_tool_outputs.tool_calls
+                        tool_outputs = []
+                        for tc in tool_calls:
+                            if tc.function.name == "get_product_catalogue":
+                                args = json.loads(tc.function.arguments) if tc.function.arguments else {}
+                                result = get_product_catalogue(args.get("risk", "medium"))
+                                tool_outputs.append(ToolOutput(tool_call_id=tc.id, output=result))
+                        if tool_outputs:
+                            agents_client.runs.submit_tool_outputs_stream(
+                                thread_id=run.thread_id, run_id=run.id,
+                                tool_outputs=tool_outputs, event_handler=self,
+                            )
+
+            handler = StreamHandler()
+
+            async def run_agent():
+                with agents_client.runs.stream(
+                    thread_id=thread.id, agent_id=agent.id, event_handler=handler,
+                ) as stream:
+                    for _ in stream:
+                        await asyncio.sleep(0.01)
+                handler.done = True
+
+            task = asyncio.create_task(run_agent())
+
+            while not handler.done or not handler.chunks.empty():
+                try:
+                    chunk = await asyncio.wait_for(handler.chunks.get(), timeout=0.1)
+                    accumulated += chunk
+                    yield f"data: {json.dumps({'type': 'content', 'data': chunk})}\n\n"
+                except asyncio.TimeoutError:
+                    if task.done():
+                        # Drain remaining chunks
+                        while not handler.chunks.empty():
+                            chunk = handler.chunks.get_nowait()
+                            accumulated += chunk
+                            yield f"data: {json.dumps({'type': 'content', 'data': chunk})}\n\n"
+                        break
+
+            await task
+
+            clean_text, citations = _extract_citations(accumulated)
+            yield f"data: {json.dumps({'type': 'complete', 'data': {'response': clean_text, 'citations': citations}})}\n\n"
+
+        return StreamingResponse(
+            generate(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
+        )
+
+    except Exception as e:
+        print(f"Advisor chat stream error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/evaluate/{thread_id}/{run_id}")
 async def evaluate_run(thread_id: str, run_id: str):
@@ -1121,6 +1800,21 @@ class ProjectionResult(BaseModel):
     accounts: List[ProjectedAccount]
     holdings: List[ProjectedHolding]
 
+class ScenarioRisk(BaseModel):
+    title: str
+    detail: str
+    severity: str  # high, medium, low
+
+class ScenarioOpportunity(BaseModel):
+    title: str
+    detail: str
+    impact: str  # high, medium, low
+
+class ScenarioActionItem(BaseModel):
+    action: str
+    priority: str  # high, medium, low
+    category: str  # contribution, allocation, tax, planning
+
 class ScenarioProjectionRequest(BaseModel):
     profile_id: str
     scenario_description: str
@@ -1131,8 +1825,11 @@ class ScenarioProjectionResponse(BaseModel):
     projection: ProjectionResult
     assumptions: ProjectionAssumptions
     summary: str
-    risks: List[str]
-    opportunities: List[str]
+    headline: Optional[str] = None
+    risks: Any  # List[str] or List[ScenarioRisk]
+    opportunities: Any  # List[str] or List[ScenarioOpportunity]
+    action_items: Optional[List[ScenarioActionItem]] = None
+    key_factors: Optional[List[str]] = None
 
 SCENARIO_PROJECTION_PROMPT = """
 You are a financial projection analyst. Your task is to analyze a user's portfolio and project future values based on a described scenario.
@@ -1200,17 +1897,37 @@ CRITICAL: Your response must be a single JSON object with this exact structure:
     "contribution_limit_401k": 23000,
     "contribution_limit_ira": 7000
   }},
+  "headline": "<Short 5-8 word headline summarizing the scenario outcome>",
   "summary": "<2-3 sentence explanation of projection results>",
+  "key_factors": [
+    "<key factor 1 driving this projection - keep under 10 words>",
+    "<key factor 2>",
+    "<key factor 3>"
+  ],
   "risks": [
-    "<risk factor 1>",
-    "<risk factor 2>"
+    {{
+      "title": "<Short risk title, 3-6 words>",
+      "detail": "<1-2 sentence explanation of this risk>",
+      "severity": "high" | "medium" | "low"
+    }}
   ],
   "opportunities": [
-    "<opportunity 1>",
-    "<opportunity 2>"
+    {{
+      "title": "<Short opportunity title, 3-6 words>",
+      "detail": "<1-2 sentence explanation of this opportunity>",
+      "impact": "high" | "medium" | "low"
+    }}
+  ],
+  "action_items": [
+    {{
+      "action": "<Specific actionable step the user should take>",
+      "priority": "high" | "medium" | "low",
+      "category": "contribution" | "allocation" | "tax" | "planning"
+    }}
   ]
 }}
 
+Provide 2-4 risks, 2-4 opportunities, 2-4 action_items, and 2-4 key_factors.
 Be specific with numbers. All monetary values should be rounded to nearest dollar.
 Percentages should have 1-2 decimal places.
 Account for the specific timeframe - don't use full annual returns for shorter periods.

@@ -15,7 +15,7 @@ import {
   Trash2,
   ChevronRight,
 } from "lucide-react"
-import type { ScenarioProjectionResponse } from "@/lib/api"
+import type { ScenarioProjectionResponse, ScenarioRisk, ScenarioOpportunity } from "@/lib/api"
 import {
   listSavedScenarios,
   getSavedScenario,
@@ -399,71 +399,185 @@ export const ScenarioProjectionOverlay: React.FC<ScenarioProjectionOverlayProps>
       {/* Projection Summary (when available) */}
       {projection && !isLoading && (
         <div className="bg-gradient-to-b from-indigo-50/50 to-transparent border-b border-indigo-100 px-4 py-4">
-          <div className="max-w-4xl mx-auto">
-            {/* Summary */}
-            <div className="bg-white rounded-xl border border-indigo-100 p-4 mb-4 shadow-sm">
+          <div className="max-w-4xl mx-auto space-y-4">
+            {/* Headline + Summary Card */}
+            <div className="bg-white rounded-xl border border-indigo-100 p-4 shadow-sm">
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Info className="w-4 h-4 text-indigo-600" />
                 </div>
-                <p className="text-sm text-gray-700 leading-relaxed">
-                  {projection.summary}
-                </p>
+                <div className="flex-1 min-w-0">
+                  {projection.headline && (
+                    <h3 className="text-sm font-semibold text-gray-900 mb-1">{projection.headline}</h3>
+                  )}
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    {projection.summary}
+                  </p>
+                  {/* Key Factors Pills */}
+                  {projection.key_factors && projection.key_factors.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {projection.key_factors.map((factor, i) => (
+                        <span key={i} className="text-[11px] bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md border border-indigo-100 font-medium">
+                          {factor}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Assumptions, Risks, Opportunities */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* Assumptions + Action Items Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {/* Assumptions */}
-              <div className="bg-white rounded-xl border border-gray-100 p-3">
+              <div className="bg-white rounded-xl border border-gray-100 p-3 shadow-sm">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                   Assumptions
                 </p>
-                <ul className="space-y-1">
-                  <li className="text-xs text-gray-600">
-                    Market return: {(projection.assumptions.market_return_annual * 100).toFixed(0)}%/yr
-                  </li>
-                  <li className="text-xs text-gray-600">
-                    Inflation: {(projection.assumptions.inflation_rate * 100).toFixed(1)}%
-                  </li>
-                </ul>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-2 bg-gray-50 rounded-lg">
+                    <div className="text-[10px] text-gray-400 font-medium">Market Return</div>
+                    <div className="text-sm font-semibold text-gray-900">
+                      {(projection.assumptions.market_return_annual * 100).toFixed(0)}%<span className="text-xs text-gray-400 font-normal">/yr</span>
+                    </div>
+                  </div>
+                  <div className="p-2 bg-gray-50 rounded-lg">
+                    <div className="text-[10px] text-gray-400 font-medium">Inflation</div>
+                    <div className="text-sm font-semibold text-gray-900">
+                      {(projection.assumptions.inflation_rate * 100).toFixed(1)}%
+                    </div>
+                  </div>
+                  <div className="p-2 bg-gray-50 rounded-lg">
+                    <div className="text-[10px] text-gray-400 font-medium">401(k) Limit</div>
+                    <div className="text-sm font-semibold text-gray-900">
+                      ${projection.assumptions.contribution_limit_401k.toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="p-2 bg-gray-50 rounded-lg">
+                    <div className="text-[10px] text-gray-400 font-medium">IRA Limit</div>
+                    <div className="text-sm font-semibold text-gray-900">
+                      ${projection.assumptions.contribution_limit_ira.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
               </div>
 
+              {/* Action Items */}
+              {projection.action_items && projection.action_items.length > 0 && (
+                <div className="bg-white rounded-xl border border-indigo-100 p-3 shadow-sm">
+                  <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wider mb-2">
+                    ✅ Recommended Actions
+                  </p>
+                  <div className="space-y-2">
+                    {projection.action_items.map((item, i) => {
+                      const catIcons: Record<string, string> = { contribution: '💰', allocation: '📊', tax: '🧾', planning: '🎯' }
+                      const prioColors: Record<string, string> = {
+                        high: 'bg-red-100 text-red-700 border-red-200',
+                        medium: 'bg-amber-100 text-amber-700 border-amber-200',
+                        low: 'bg-green-100 text-green-700 border-green-200',
+                      }
+                      return (
+                        <div key={i} className="flex items-start gap-2">
+                          <span className="text-sm mt-0.5">{catIcons[item.category] || '📋'}</span>
+                          <span className="text-xs text-gray-700 flex-1">{item.action}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium flex-shrink-0 ${prioColors[item.priority]}`}>
+                            {item.priority}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Risks & Opportunities Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {/* Risks */}
               {projection.risks.length > 0 && (
-                <div className="bg-amber-50 rounded-xl border border-amber-100 p-3">
-                  <div className="flex items-center gap-1.5 mb-2">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5">
                     <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
                     <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider">
                       Risks
                     </p>
                   </div>
-                  <ul className="space-y-1">
-                    {projection.risks.slice(0, 2).map((risk, i) => (
-                      <li key={i} className="text-xs text-amber-800">
-                        {risk}
-                      </li>
-                    ))}
-                  </ul>
+                  {projection.risks.map((risk, i) => {
+                    const isStructured = typeof risk === 'object' && risk !== null
+                    const sevColors: Record<string, string> = {
+                      high: 'border-l-red-500 bg-red-50',
+                      medium: 'border-l-amber-500 bg-amber-50',
+                      low: 'border-l-blue-500 bg-blue-50',
+                    }
+                    const sevBadge: Record<string, string> = {
+                      high: 'bg-red-100 text-red-700 border-red-200',
+                      medium: 'bg-amber-100 text-amber-700 border-amber-200',
+                      low: 'bg-blue-100 text-blue-700 border-blue-200',
+                    }
+                    if (isStructured) {
+                      const r = risk as ScenarioRisk
+                      return (
+                        <div key={i} className={`p-3 rounded-lg border-l-4 ${sevColors[r.severity] || sevColors.medium}`}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-medium text-gray-900">{r.title}</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${sevBadge[r.severity] || sevBadge.medium}`}>
+                              {r.severity}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-600">{r.detail}</p>
+                        </div>
+                      )
+                    }
+                    return (
+                      <div key={i} className="p-3 rounded-lg border-l-4 border-l-amber-500 bg-amber-50">
+                        <p className="text-xs text-amber-800">{risk as string}</p>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
 
               {/* Opportunities */}
               {projection.opportunities.length > 0 && (
-                <div className="bg-emerald-50 rounded-xl border border-emerald-100 p-3">
-                  <div className="flex items-center gap-1.5 mb-2">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5">
                     <Lightbulb className="w-3.5 h-3.5 text-emerald-600" />
                     <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">
                       Opportunities
                     </p>
                   </div>
-                  <ul className="space-y-1">
-                    {projection.opportunities.slice(0, 2).map((opp, i) => (
-                      <li key={i} className="text-xs text-emerald-800">
-                        {opp}
-                      </li>
-                    ))}
-                  </ul>
+                  {projection.opportunities.map((opp, i) => {
+                    const isStructured = typeof opp === 'object' && opp !== null
+                    const impColors: Record<string, string> = {
+                      high: 'border-l-emerald-500 bg-emerald-50',
+                      medium: 'border-l-blue-500 bg-blue-50',
+                      low: 'border-l-gray-400 bg-gray-50',
+                    }
+                    const impBadge: Record<string, string> = {
+                      high: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+                      medium: 'bg-blue-100 text-blue-700 border-blue-200',
+                      low: 'bg-gray-100 text-gray-600 border-gray-200',
+                    }
+                    if (isStructured) {
+                      const o = opp as ScenarioOpportunity
+                      return (
+                        <div key={i} className={`p-3 rounded-lg border-l-4 ${impColors[o.impact] || impColors.medium}`}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-medium text-gray-900">{o.title}</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${impBadge[o.impact] || impBadge.medium}`}>
+                              {o.impact} impact
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-600">{o.detail}</p>
+                        </div>
+                      )
+                    }
+                    return (
+                      <div key={i} className="p-3 rounded-lg border-l-4 border-l-emerald-500 bg-emerald-50">
+                        <p className="text-xs text-emerald-800">{opp as string}</p>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>

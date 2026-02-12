@@ -1,0 +1,26 @@
+[
+  {
+    "id": "e216be5b-f4cb-4cd1-a4b4-372844b09a14",
+    "advisor_id": "advisor-jane",
+    "client_id": "demo-user",
+    "content": "Test note from API",
+    "category": "general",
+    "is_pinned": false,
+    "related_conversation_id": null,
+    "related_scenario_id": null,
+    "created_at": "2026-02-12T00:52:06.451052",
+    "updated_at": "2026-02-12T00:52:06.452990"
+  },
+  {
+    "id": "92aded33-5ea6-4d3b-bd0f-60576d31ed37",
+    "advisor_id": "advisor-jane",
+    "client_id": "demo-user",
+    "content": "Test note via live API",
+    "category": "general",
+    "is_pinned": true,
+    "related_conversation_id": null,
+    "related_scenario_id": null,
+    "created_at": "2026-02-12T00:55:47.793161",
+    "updated_at": "2026-02-12T00:55:47.794595"
+  }
+]

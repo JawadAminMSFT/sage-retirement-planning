@@ -1,0 +1,20 @@
+[
+  {
+    "id": "admin-system",
+    "email": "admin@sagefinancial.com",
+    "name": "System Administrator",
+    "role": "admin",
+    "permissions": ["manage_products", "review_compliance", "manage_users", "view_analytics"],
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2026-02-01T00:00:00Z"
+  },
+  {
+    "id": "admin-compliance",
+    "email": "compliance@sagefinancial.com",
+    "name": "Compliance Officer",
+    "role": "admin",
+    "permissions": ["review_compliance", "view_analytics"],
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2026-02-01T00:00:00Z"
+  }
+]

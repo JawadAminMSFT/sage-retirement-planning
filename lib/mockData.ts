@@ -532,42 +532,91 @@ export function generateMockProjection(
 
   // Generate summary based on scenario
   let summary = ""
+  let headline = ""
   if (scenario.includes("increase") && scenario.includes("contribution")) {
+    headline = "Increased contributions accelerate growth"
     summary = `By increasing your contribution rate, your portfolio would grow an additional ${formatCurrency(Math.abs(totalChange))} over ${timeframe_months} months. This assumes ${(marketReturn / timeMultiplier * 100).toFixed(0)}% annual market returns and accounts for the 2026 contribution limits.`
   } else if (scenario.includes("max")) {
+    headline = "Maximized contributions boost retirement"
     summary = `Maximizing your retirement contributions would boost your portfolio by ${formatCurrency(Math.abs(totalChange))} over ${timeframe_months} months. The tax-advantaged growth compounds significantly over your remaining working years.`
   } else if (scenario.includes("crash") || scenario.includes("drop")) {
+    headline = "Market downturn impacts portfolio value"
     summary = `In a market downturn scenario, your portfolio could decline by ${formatCurrency(Math.abs(totalChange))} (${Math.abs(totalChangePercent).toFixed(1)}%) over ${timeframe_months} months. However, continued contributions would buy shares at lower prices, benefiting long-term returns.`
   } else if (scenario.includes("stop") && scenario.includes("contribution")) {
+    headline = "Paused contributions slow growth"
     summary = `Pausing contributions would slow your portfolio growth. You would have ${formatCurrency(Math.abs(totalChange))} less over ${timeframe_months} months compared to maintaining your current savings rate.`
   } else {
+    headline = `Portfolio ${totalChange >= 0 ? "growth" : "decline"} projected`
     summary = `Based on your scenario, your portfolio would ${totalChange >= 0 ? "grow by" : "decline by"} ${formatCurrency(Math.abs(totalChange))} (${Math.abs(totalChangePercent).toFixed(1)}%) over ${timeframe_months} months. This projection accounts for market returns and any changes to your contribution strategy.`
   }
 
-  // Generate risks and opportunities based on scenario
-  const risks: string[] = []
-  const opportunities: string[] = []
+  // Generate structured risks and opportunities based on scenario
+  const risks: { title: string; detail: string; severity: "high" | "medium" | "low" }[] = []
+  const opportunities: { title: string; detail: string; impact: "high" | "medium" | "low" }[] = []
+  const action_items: { action: string; priority: "high" | "medium" | "low"; category: "contribution" | "allocation" | "tax" | "planning" }[] = []
+  let key_factors: string[] = []
 
   if (scenario.includes("increase") || scenario.includes("max")) {
-    risks.push("Increased contributions reduce take-home pay")
-    risks.push("Market volatility could temporarily reduce account values")
-    opportunities.push("Tax-advantaged growth will compound over time")
-    opportunities.push("You're building a stronger retirement foundation")
+    risks.push(
+      { title: "Reduced Take-Home Pay", detail: "Increased contributions will lower your monthly disposable income. Ensure you maintain an adequate emergency fund.", severity: "medium" },
+      { title: "Market Volatility", detail: "Market fluctuations could temporarily reduce account values, though long-term trends favor staying invested.", severity: "low" },
+    )
+    opportunities.push(
+      { title: "Tax-Advantaged Compounding", detail: "Pre-tax contributions grow tax-deferred, significantly accelerating wealth accumulation over time.", impact: "high" },
+      { title: "Stronger Retirement Foundation", detail: "Higher contributions now build a larger base for compound growth in later years.", impact: "high" },
+    )
+    action_items.push(
+      { action: "Review your monthly budget to ensure increased contributions are sustainable", priority: "high", category: "planning" },
+      { action: "Verify you're capturing the full employer match before increasing further", priority: "high", category: "contribution" },
+      { action: "Consider splitting increases between pre-tax and Roth for tax diversification", priority: "medium", category: "tax" },
+    )
+    key_factors = ["Higher contribution rate", "Tax-advantaged growth", "Compound interest over time"]
   } else if (scenario.includes("crash") || scenario.includes("drop")) {
-    risks.push("Portfolio value could decline 15-30% in severe scenarios")
-    risks.push("Recovery typically takes 2-4 years historically")
-    opportunities.push("Lower prices mean more shares purchased with same contributions")
-    opportunities.push("Staying invested through downturns has historically rewarded patience")
+    risks.push(
+      { title: "Significant Value Decline", detail: "Portfolio could drop 15-30% in a severe downturn, with recovery typically taking 2-4 years historically.", severity: "high" },
+      { title: "Sequence-of-Returns Risk", detail: "If near retirement, a crash could permanently impact your retirement timeline and income.", severity: "high" },
+      { title: "Emotional Decision-Making", detail: "Market drops often trigger panic selling, which locks in losses and misses the recovery.", severity: "medium" },
+    )
+    opportunities.push(
+      { title: "Dollar-Cost Averaging Benefit", detail: "Continued contributions during a downturn buy more shares at lower prices, enhancing long-term returns.", impact: "high" },
+      { title: "Tax-Loss Harvesting", detail: "Losses in taxable accounts can offset gains and reduce your tax bill by up to $3,000/year.", impact: "medium" },
+      { title: "Rebalancing Opportunity", detail: "A crash creates a natural rebalancing moment to buy undervalued asset classes.", impact: "medium" },
+    )
+    action_items.push(
+      { action: "Maintain regular contributions — do not pause during downturns", priority: "high", category: "contribution" },
+      { action: "Review asset allocation to ensure it matches your risk tolerance", priority: "high", category: "allocation" },
+      { action: "Consider tax-loss harvesting in taxable brokerage accounts", priority: "medium", category: "tax" },
+    )
+    key_factors = ["Market decline magnitude", "Recovery timeline", "Continued contributions"]
   } else if (scenario.includes("stop")) {
-    risks.push("Missing out on employer matching contributions")
-    risks.push("Lost compounding time cannot be recovered")
-    opportunities.push("Could redirect funds to emergency savings if needed")
-    opportunities.push("Can resume contributions when financial situation improves")
+    risks.push(
+      { title: "Lost Employer Match", detail: "Stopping contributions means forfeiting free money from employer matching — typically 3-6% of salary.", severity: "high" },
+      { title: "Irreplaceable Compounding Time", detail: "Each year without contributions permanently reduces your retirement nest egg. Time in market cannot be recovered.", severity: "high" },
+    )
+    opportunities.push(
+      { title: "Build Emergency Reserves", detail: "Redirecting funds to build a 3-6 month emergency fund can provide financial stability.", impact: "medium" },
+      { title: "Resume When Ready", detail: "Contributions can be restarted at any time, and catch-up contributions are available after age 50.", impact: "medium" },
+    )
+    action_items.push(
+      { action: "If possible, contribute at least enough to capture full employer match", priority: "high", category: "contribution" },
+      { action: "Set a specific date to resume full contributions", priority: "high", category: "planning" },
+      { action: "Explore whether a Roth conversion during lower-income years makes sense", priority: "low", category: "tax" },
+    )
+    key_factors = ["Lost employer match", "Reduced compounding", "Lower future balance"]
   } else {
-    risks.push("Actual market returns may differ from projections")
-    risks.push("Inflation could erode purchasing power")
-    opportunities.push("Consistent investing benefits from dollar-cost averaging")
-    opportunities.push("Time in market historically outperforms timing the market")
+    risks.push(
+      { title: "Projection Uncertainty", detail: "Actual market returns may differ significantly from the assumed 7% annual average used in this projection.", severity: "medium" },
+      { title: "Inflation Erosion", detail: "Even with positive returns, inflation at 2.5%+ annually reduces the real purchasing power of your savings.", severity: "low" },
+    )
+    opportunities.push(
+      { title: "Dollar-Cost Averaging", detail: "Consistent investing through regular contributions smooths out market volatility over time.", impact: "medium" },
+      { title: "Time in Market Advantage", detail: "Historically, staying invested outperforms trying to time market entries and exits.", impact: "high" },
+    )
+    action_items.push(
+      { action: "Review your portfolio allocation annually to stay on track", priority: "medium", category: "allocation" },
+      { action: "Consider increasing contributions by 1% each year", priority: "medium", category: "contribution" },
+    )
+    key_factors = ["Market return assumptions", "Contribution consistency", "Time horizon"]
   }
 
   return {
@@ -584,9 +633,12 @@ export function generateMockProjection(
       contribution_limit_401k: 23000,
       contribution_limit_ira: 7000,
     },
+    headline,
     summary,
+    key_factors,
     risks,
     opportunities,
+    action_items,
   }
 }
 

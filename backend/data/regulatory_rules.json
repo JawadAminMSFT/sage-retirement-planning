@@ -1,0 +1,300 @@
+[
+  {
+    "id": "us-401k-limit-2026",
+    "jurisdiction": "US",
+    "category": "contribution_limits",
+    "title": "401(k) Contribution Limit 2026",
+    "description": "Maximum employee elective deferral contribution to 401(k), 403(b), and most 457 plans for 2026.",
+    "current_values": {
+      "limit": 23500,
+      "year": 2026
+    },
+    "account_types": ["401k", "roth_401k"],
+    "effective_date": "2026-01-01",
+    "source_url": "https://www.irs.gov/retirement-plans/plan-participant-employee/retirement-topics-401k-and-profit-sharing-plan-contribution-limits",
+    "is_active": true,
+    "updated_by": "system",
+    "last_verified": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "us-401k-catchup-2026",
+    "jurisdiction": "US",
+    "category": "contribution_limits",
+    "title": "401(k) Catch-Up Contribution 2026",
+    "description": "Additional catch-up contribution allowed for participants age 50 or older.",
+    "current_values": {
+      "limit": 7500,
+      "year": 2026,
+      "total_with_catchup": 31000
+    },
+    "account_types": ["401k", "roth_401k"],
+    "age_requirements": {"min": 50},
+    "effective_date": "2026-01-01",
+    "source_url": "https://www.irs.gov/retirement-plans/plan-participant-employee/retirement-topics-catch-up-contributions",
+    "is_active": true,
+    "updated_by": "system",
+    "last_verified": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "us-ira-limit-2026",
+    "jurisdiction": "US",
+    "category": "contribution_limits",
+    "title": "IRA Contribution Limit 2026",
+    "description": "Maximum annual contribution to Traditional and Roth IRAs combined.",
+    "current_values": {
+      "limit": 7000,
+      "year": 2026
+    },
+    "account_types": ["traditional_ira", "roth_ira"],
+    "effective_date": "2026-01-01",
+    "source_url": "https://www.irs.gov/retirement-plans/plan-participant-employee/retirement-topics-ira-contribution-limits",
+    "is_active": true,
+    "updated_by": "system",
+    "last_verified": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "us-ira-catchup-2026",
+    "jurisdiction": "US",
+    "category": "contribution_limits",
+    "title": "IRA Catch-Up Contribution 2026",
+    "description": "Additional IRA contribution for individuals age 50 or older.",
+    "current_values": {
+      "limit": 1000,
+      "year": 2026,
+      "total_with_catchup": 8000
+    },
+    "account_types": ["traditional_ira", "roth_ira"],
+    "age_requirements": {"min": 50},
+    "effective_date": "2026-01-01",
+    "source_url": "https://www.irs.gov/retirement-plans/plan-participant-employee/retirement-topics-catch-up-contributions",
+    "is_active": true,
+    "updated_by": "system",
+    "last_verified": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "us-hsa-individual-2026",
+    "jurisdiction": "US",
+    "category": "contribution_limits",
+    "title": "HSA Individual Contribution Limit 2026",
+    "description": "Maximum annual HSA contribution for self-only HDHP coverage.",
+    "current_values": {
+      "limit": 4300,
+      "year": 2026
+    },
+    "account_types": ["hsa"],
+    "effective_date": "2026-01-01",
+    "source_url": "https://www.irs.gov/publications/p969",
+    "is_active": true,
+    "updated_by": "system",
+    "last_verified": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "us-hsa-family-2026",
+    "jurisdiction": "US",
+    "category": "contribution_limits",
+    "title": "HSA Family Contribution Limit 2026",
+    "description": "Maximum annual HSA contribution for family HDHP coverage.",
+    "current_values": {
+      "limit": 8550,
+      "year": 2026
+    },
+    "account_types": ["hsa"],
+    "effective_date": "2026-01-01",
+    "source_url": "https://www.irs.gov/publications/p969",
+    "is_active": true,
+    "updated_by": "system",
+    "last_verified": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "us-rmd-age",
+    "jurisdiction": "US",
+    "category": "withdrawal_rules",
+    "title": "Required Minimum Distribution Start Age",
+    "description": "Age at which required minimum distributions must begin from Traditional IRAs and 401(k)s (SECURE 2.0 Act).",
+    "current_values": {
+      "age": 73,
+      "future_age_75_year": 2033
+    },
+    "account_types": ["401k", "traditional_ira"],
+    "age_requirements": {"min": 73},
+    "effective_date": "2023-01-01",
+    "source_url": "https://www.irs.gov/retirement-plans/plan-participant-employee/retirement-topics-required-minimum-distributions-rmds",
+    "is_active": true,
+    "updated_by": "system",
+    "last_verified": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "us-social-security-fra",
+    "jurisdiction": "US",
+    "category": "government_benefits",
+    "title": "Social Security Full Retirement Age",
+    "description": "Full retirement age for Social Security benefits for those born 1960 or later.",
+    "current_values": {
+      "full_retirement_age": 67,
+      "early_retirement_age": 62,
+      "delayed_credits_max_age": 70,
+      "early_reduction_per_month": 0.00556,
+      "delayed_credit_per_year": 0.08
+    },
+    "effective_date": "2000-01-01",
+    "source_url": "https://www.ssa.gov/benefits/retirement/planner/agereduction.html",
+    "is_active": true,
+    "updated_by": "system",
+    "last_verified": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "us-roth-conversion",
+    "jurisdiction": "US",
+    "category": "tax_treatment",
+    "title": "Roth Conversion Rules",
+    "description": "Rules for converting Traditional IRA or 401(k) assets to Roth accounts.",
+    "current_values": {
+      "no_income_limit": true,
+      "no_age_limit": true,
+      "taxable_in_conversion_year": true,
+      "five_year_rule_applies": true
+    },
+    "account_types": ["traditional_ira", "401k", "roth_ira", "roth_401k"],
+    "effective_date": "2010-01-01",
+    "source_url": "https://www.irs.gov/retirement-plans/retirement-plans-faqs-regarding-iras-rollovers-and-roth-conversions",
+    "is_active": true,
+    "updated_by": "system",
+    "last_verified": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "ca-rrsp-limit-2026",
+    "jurisdiction": "CA",
+    "category": "contribution_limits",
+    "title": "RRSP Contribution Limit 2026",
+    "description": "Maximum RRSP contribution for 2026 tax year. Lesser of 18% of prior year earned income or the dollar limit.",
+    "current_values": {
+      "dollar_limit": 32490,
+      "percentage_of_income": 0.18,
+      "year": 2026
+    },
+    "account_types": ["rrsp"],
+    "effective_date": "2026-01-01",
+    "source_url": "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/rrsps-related-plans/contributing-a-rrsp-prpp/rrsp-mp-limits.html",
+    "is_active": true,
+    "updated_by": "system",
+    "last_verified": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "ca-tfsa-limit-2026",
+    "jurisdiction": "CA",
+    "category": "contribution_limits",
+    "title": "TFSA Contribution Limit 2026",
+    "description": "Annual TFSA contribution room for 2026. Cumulative room starts from 2009 or year turned 18.",
+    "current_values": {
+      "annual_limit": 7000,
+      "year": 2026,
+      "cumulative_since_2009": 102000
+    },
+    "account_types": ["tfsa"],
+    "age_requirements": {"min": 18},
+    "effective_date": "2026-01-01",
+    "source_url": "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/tax-free-savings-account/contributions.html",
+    "is_active": true,
+    "updated_by": "system",
+    "last_verified": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "ca-resp-limit",
+    "jurisdiction": "CA",
+    "category": "contribution_limits",
+    "title": "RESP Contribution Limits",
+    "description": "Lifetime RESP contribution limit per beneficiary. Annual CESG matching up to $500.",
+    "current_values": {
+      "lifetime_limit": 50000,
+      "annual_cesg_max": 500,
+      "cesg_match_rate": 0.20,
+      "annual_for_cesg": 2500,
+      "lifetime_cesg_max": 7200
+    },
+    "account_types": ["resp"],
+    "effective_date": "2007-01-01",
+    "source_url": "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/registered-education-savings-plans-resps.html",
+    "is_active": true,
+    "updated_by": "system",
+    "last_verified": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "ca-cpp-standard",
+    "jurisdiction": "CA",
+    "category": "government_benefits",
+    "title": "Canada Pension Plan Standard Retirement",
+    "description": "CPP standard retirement age and early/deferred options.",
+    "current_values": {
+      "standard_age": 65,
+      "early_age": 60,
+      "deferred_age": 70,
+      "early_reduction_per_month": 0.006,
+      "deferred_increase_per_month": 0.007,
+      "max_monthly_2026": 1433
+    },
+    "effective_date": "2012-01-01",
+    "source_url": "https://www.canada.ca/en/services/benefits/publicpensions/cpp.html",
+    "is_active": true,
+    "updated_by": "system",
+    "last_verified": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "ca-oas-eligibility",
+    "jurisdiction": "CA",
+    "category": "government_benefits",
+    "title": "Old Age Security Eligibility",
+    "description": "OAS eligibility age and deferral options. Clawback threshold included.",
+    "current_values": {
+      "eligibility_age": 65,
+      "deferral_max_age": 70,
+      "deferral_increase_per_month": 0.006,
+      "max_monthly_2026": 727,
+      "clawback_threshold_2026": 90997,
+      "full_clawback_threshold_2026": 148179
+    },
+    "effective_date": "2023-01-01",
+    "source_url": "https://www.canada.ca/en/services/benefits/publicpensions/cpp/old-age-security.html",
+    "is_active": true,
+    "updated_by": "system",
+    "last_verified": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "ca-rrif-conversion",
+    "jurisdiction": "CA",
+    "category": "withdrawal_rules",
+    "title": "RRSP to RRIF Conversion",
+    "description": "Mandatory conversion of RRSP to RRIF by end of year turning 71. Minimum withdrawal schedule applies.",
+    "current_values": {
+      "conversion_deadline_age": 71,
+      "min_withdrawal_at_72": 0.0540,
+      "min_withdrawal_at_80": 0.0682,
+      "min_withdrawal_at_90": 0.1392
+    },
+    "account_types": ["rrsp", "rrif"],
+    "age_requirements": {"max": 71},
+    "effective_date": "2015-01-01",
+    "source_url": "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/registered-retirement-income-fund-rrif.html",
+    "is_active": true,
+    "updated_by": "system",
+    "last_verified": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "ca-tax-brackets-2026",
+    "jurisdiction": "CA",
+    "category": "tax_treatment",
+    "title": "Federal Tax Brackets 2026",
+    "description": "Canadian federal marginal tax rates for 2026.",
+    "current_values": {
+      "bracket_1": {"limit": 57375, "rate": 0.15},
+      "bracket_2": {"limit": 114750, "rate": 0.205},
+      "bracket_3": {"limit": 177882, "rate": 0.26},
+      "bracket_4": {"limit": 253414, "rate": 0.29},
+      "bracket_5": {"limit": null, "rate": 0.33}
+    },
+    "effective_date": "2026-01-01",
+    "source_url": "https://www.canada.ca/en/revenue-agency/services/tax/individuals/frequently-asked-questions-individuals/canadian-income-tax-rates-individuals-current-previous-years.html",
+    "is_active": true,
+    "updated_by": "system",
+    "last_verified": "2026-01-01T00:00:00Z"
+  }
+]

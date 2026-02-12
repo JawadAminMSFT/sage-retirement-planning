@@ -191,6 +191,24 @@ export interface ScenarioProjectionRequest {
   }
 }
 
+export interface ScenarioRisk {
+  title: string
+  detail: string
+  severity: 'high' | 'medium' | 'low'
+}
+
+export interface ScenarioOpportunity {
+  title: string
+  detail: string
+  impact: 'high' | 'medium' | 'low'
+}
+
+export interface ScenarioActionItem {
+  action: string
+  priority: 'high' | 'medium' | 'low'
+  category: 'contribution' | 'allocation' | 'tax' | 'planning'
+}
+
 export interface ScenarioProjectionResponse {
   projection: {
     total_value: number
@@ -200,9 +218,12 @@ export interface ScenarioProjectionResponse {
     holdings: ProjectedHolding[]
   }
   assumptions: ProjectionAssumptions
+  headline?: string
   summary: string
-  risks: string[]
-  opportunities: string[]
+  key_factors?: string[]
+  risks: (string | ScenarioRisk)[]
+  opportunities: (string | ScenarioOpportunity)[]
+  action_items?: ScenarioActionItem[]
 }
 
 // Utility functions
