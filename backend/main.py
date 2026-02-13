@@ -576,13 +576,13 @@ def setup_agent():
   """Initialize or find the retirement planning agent"""
   functions = FunctionTool(user_functions)
   tools = functions.definitions
-  
+
   try:
       code_interpreter = CodeInterpreterTool()
       tools.extend(code_interpreter.definitions)
   except Exception as e:
       print(f"CodeInterpreter not available: {e}")
-  
+
   # Try to find existing agent
   try:
       agents = agents_client.list_agents()
@@ -596,18 +596,32 @@ def setup_agent():
               ), functions
   except Exception as e:
       print(f"Could not list agents: {e}")
-  
+
   # Create new agent
-  agent = agents_client.create_agent(
-      model=model_deployment_name,
-      name=agent_name,
-      instructions=SYSTEM_INSTRUCTIONS,
-      tools=tools,
-  )
-  return agent, functions
+  try:
+      agent = agents_client.create_agent(
+          model=model_deployment_name,
+          name=agent_name,
+          instructions=SYSTEM_INSTRUCTIONS,
+          tools=tools,
+      )
+      return agent, functions
+  except Exception as e:
+      print(f"FATAL: Could not create agent: {e}")
+      print("Backend will start in limited mode - voice endpoints available, chat disabled")
+      return None, functions
 
 # Initialize agent
-agent, functions = setup_agent()
+try:
+    agent, functions = setup_agent()
+    if agent is None:
+        print("[WARNING] Agent initialization failed. Chat endpoints will not work.")
+        print("[OK] Voice endpoints are still available at /ws/voice/session")
+except Exception as e:
+    print(f"[ERROR] FATAL ERROR during agent setup: {e}")
+    print("Backend starting in emergency mode - only voice endpoints available")
+    agent = None
+    functions = None
 
 # Evaluation Configuration
 def setup_evaluators():
@@ -748,12 +762,14 @@ async def evaluate_agent_run(thread_id: str, run_id: str) -> Optional[Dict[str, 
 # FastAPI app
 app = FastAPI(title="Retirement Planning API", version="1.0.0")
 
-# Include advisor and admin routers
+# Include advisor, admin, and voice routers
 from advisor_routes import router as advisor_router
 from admin_routes import router as admin_router
+from voice import voice_router
 
 app.include_router(advisor_router)
 app.include_router(admin_router)
+app.include_router(voice_router)
 
 app.add_middleware(
   CORSMiddleware,
@@ -765,11 +781,28 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-  return {"message": "Retirement Planning API", "status": "active"}
+  return {
+      "message": "Retirement Planning API",
+      "status": "active",
+      "services": {
+          "chat": "available" if agent is not None else "unavailable",
+          "voice": "available",
+          "storage": "available"
+      }
+  }
 
 @app.get("/health")
 async def health():
-  return {"status": "healthy", "agent_id": agent.id}
+  return {
+      "status": "healthy",
+      "agent_initialized": agent is not None,
+      "agent_id": agent.id if agent is not None else None,
+      "services": {
+          "chat_endpoints": agent is not None,
+          "voice_endpoints": True,
+          "storage": True
+      }
+  }
 
 @app.get("/profiles", response_model=ProfilesResponse)
 async def get_profiles():
@@ -1324,6 +1357,13 @@ def _extract_citations(text: str) -> tuple:
 @app.post("/advisor/chat")
 async def advisor_chat(request: AdvisorChatRequest):
     """Non-streaming advisor chat with real LLM and enriched context."""
+    # Check if agent is available
+    if agent is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Chat service unavailable. Agent not initialized. Please check Azure AI Project configuration."
+        )
+
     try:
         system_prompt = await _build_advisor_context(request.advisor_id)
 
@@ -1381,6 +1421,12 @@ async def advisor_chat(request: AdvisorChatRequest):
 @app.post("/advisor/chat/stream")
 async def advisor_chat_stream(request: AdvisorChatRequest):
     """Streaming advisor chat — sends SSE events with type 'content' and 'complete'."""
+    # Check if agent is available
+    if agent is None:
+        async def error_stream():
+            yield f"data: {json.dumps({'type': 'error', 'content': 'Chat service unavailable. Agent not initialized.'})}\n\n"
+        return StreamingResponse(error_stream(), media_type="text/event-stream")
+
     try:
         system_prompt = await _build_advisor_context(request.advisor_id)
 
@@ -1504,6 +1550,12 @@ async def evaluate_run(thread_id: str, run_id: str):
 @app.post("/chat/stream")
 async def chat_stream(request: ChatRequest):
   """Streaming chat endpoint with real-time status updates"""
+  # Check if agent is available
+  if agent is None:
+      async def error_stream():
+          yield f"data: {json.dumps({'type': 'error', 'content': 'Chat service unavailable. Agent not initialized.'})}\n\n"
+      return StreamingResponse(error_stream(), media_type="text/event-stream")
+
   try:
       profile = request.profile or SAMPLE_PROFILES[0]
       thread_id = thread_manager.get_or_create_thread("default_session")
@@ -1702,6 +1754,13 @@ async def chat_stream(request: ChatRequest):
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
   """Non-streaming chat endpoint for compatibility"""
+  # Check if agent is available
+  if agent is None:
+      raise HTTPException(
+          status_code=503,
+          detail="Chat service unavailable. Agent not initialized. Please check Azure AI Project configuration."
+      )
+
   try:
       profile = request.profile or SAMPLE_PROFILES[0]
       thread_id = thread_manager.get_or_create_thread("default_session")

@@ -30,6 +30,10 @@ import {
   getApiMode,
   type ConversationSummary,
 } from "@/lib/api"
+import { useVoiceSession } from "@/components/frontend/shared/voice/useVoiceSession"
+import VoiceButton from "@/components/frontend/shared/voice/VoiceButton"
+import VoiceWaveform from "@/components/frontend/shared/voice/VoiceWaveform"
+import VoiceStatusIndicator from "@/components/frontend/shared/voice/VoiceStatusIndicator"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -511,7 +515,40 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const msgCounter = useRef(0)
-  
+
+  // Voice session hook
+  const voiceSession = useVoiceSession({
+    conversationId: currentConversationId || undefined,
+    userProfile: advisor, // Pass advisor as profile for context
+    onTranscript: (text, isFinal, role) => {
+      if (isFinal && role === "user") {
+        // Add user voice message to chat
+        const userMsg: ChatMessage = {
+          id: `msg-${Date.now()}-${msgCounter.current++}`,
+          role: "user",
+          content: text,
+          timestamp: new Date().toISOString(),
+        }
+        setMessages((prev) => [...prev, userMsg])
+      } else if (isFinal && role === "assistant") {
+        // Add assistant voice message to chat
+        const assistantMsg: ChatMessage = {
+          id: `msg-${Date.now()}-${msgCounter.current++}`,
+          role: "assistant",
+          content: text,
+          timestamp: new Date().toISOString(),
+        }
+        setMessages((prev) => [...prev, assistantMsg])
+      }
+    },
+    onTurnEnd: (userTranscript, assistantTranscript) => {
+      console.log("Voice turn complete")
+    },
+    onError: (error) => {
+      console.error("Voice error:", error)
+    },
+  })
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
@@ -893,24 +930,67 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
       <div className="flex-shrink-0 p-4 bg-white border-t">
         <div className="max-w-3xl mx-auto">
           <div className="flex gap-3">
-            <div className="flex-1 relative">
-              <textarea
-                ref={inputRef}
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask about regulations, client strategies, or planning scenarios..."
-                className="w-full px-4 py-3 pr-12 border rounded-xl resize-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300"
-                rows={1}
-              />
-              <button
-                onClick={() => handleSend()}
-                disabled={!inputValue.trim() || isLoading}
-                className="absolute right-2 bottom-2 p-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              </button>
-            </div>
+            {/* Voice Button - LEFT */}
+            <VoiceButton
+              variant="advisor"
+              isActive={voiceSession.status !== "idle"}
+              isDisabled={isLoading}
+              onToggle={voiceSession.toggleSession}
+            />
+
+            {/* Conditional Input Area */}
+            {voiceSession.status === "idle" ? (
+              <div className="flex-1 relative animate-in fade-in duration-200">
+                <textarea
+                  ref={inputRef}
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask about regulations, client strategies, or planning scenarios..."
+                  className="w-full px-4 py-3 pr-12 border rounded-xl resize-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300"
+                  rows={1}
+                  disabled={isLoading}
+                />
+                <button
+                  onClick={() => handleSend()}
+                  disabled={!inputValue.trim() || isLoading}
+                  className="absolute right-2 bottom-2 p-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                </button>
+              </div>
+            ) : (
+              <div className="flex-1 px-4 py-2 border border-indigo-300 rounded-xl bg-white relative overflow-hidden animate-in fade-in duration-200">
+                {/* Status pill */}
+                <div className="flex justify-center mb-1">
+                  <VoiceStatusIndicator
+                    status={voiceSession.status}
+                    variant="advisor"
+                  />
+                </div>
+
+                {/* Waveform */}
+                <VoiceWaveform
+                  audioLevelRef={voiceSession.audioLevelRef}
+                  variant="advisor"
+                  isActive={voiceSession.status === "listening" || voiceSession.status === "speaking"}
+                  voiceStatus={voiceSession.status}
+                />
+
+                {/* Live transcript */}
+                {voiceSession.interimTranscript && (
+                  <div className="mt-1 text-center animate-in fade-in duration-150">
+                    <p className="text-xs text-indigo-600/80 truncate max-w-full px-2">
+                      {voiceSession.interimRole === "user" ? (
+                        <span className="italic">&ldquo;{voiceSession.interimTranscript}&rdquo;</span>
+                      ) : (
+                        <span>Sage: {voiceSession.interimTranscript}</span>
+                      )}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <p className="text-xs text-gray-400 mt-2 text-center">
             Sage AI provides guidance based on current regulations. Always verify advice and document recommendations.

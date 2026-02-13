@@ -25,6 +25,10 @@ import {
 import { StatusBubble } from "@/components/frontend/StatusBubble"
 import { QuickScenariosCard } from "@/components/frontend/QuickScenariosCard"
 import { AnalysisCard } from "@/components/frontend/AnalysisCard"
+import { useVoiceSession } from "@/components/frontend/shared/voice/useVoiceSession"
+import VoiceButton from "@/components/frontend/shared/voice/VoiceButton"
+import VoiceWaveform from "@/components/frontend/shared/voice/VoiceWaveform"
+import VoiceStatusIndicator from "@/components/frontend/shared/voice/VoiceStatusIndicator"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -77,7 +81,42 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
   useEffect(() => {
     conversationIdRef.current = currentConversationId
   }, [currentConversationId])
-  
+
+  // Voice session hook
+  const voiceSession = useVoiceSession({
+    conversationId: currentConversationId || undefined,
+    userProfile: selectedProfile || undefined,
+    onTranscript: (text, isFinal, role) => {
+      if (isFinal && role === "user") {
+        // Add user voice message to chat
+        const userMsg: ExtendedChatMessage = {
+          role: "user",
+          content: text,
+          timestamp: Date.now(),
+          analysis: null,
+        }
+        setMessages((prev) => [...prev, userMsg])
+      } else if (isFinal && role === "assistant") {
+        // Add assistant voice message to chat
+        const assistantMsg: ExtendedChatMessage = {
+          role: "assistant",
+          content: text,
+          timestamp: Date.now(),
+          analysis: null,
+        }
+        setMessages((prev) => [...prev, assistantMsg])
+      }
+    },
+    onTurnEnd: (userTranscript, assistantTranscript) => {
+      // Turn complete - messages already added via onTranscript
+      console.log("Voice turn complete")
+    },
+    onError: (error) => {
+      console.error("Voice error:", error)
+      // Could show error toast here
+    },
+  })
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -606,20 +645,64 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
       {/* Input */}
       <div className="border-t border-gray-200/60 p-4 sm:p-6 bg-white/60 backdrop-blur-sm">
         <div className="flex gap-3 items-end max-w-4xl mx-auto">
-          <textarea
-            ref={textareaRef}
-            value={currentMessage}
-            onChange={(e) => setCurrentMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask me about your retirement planning goals..."
-            disabled={isLoading || !selectedProfile}
-            rows={1}
-            className="flex-1 px-4 py-3 border border-green-300/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40 focus:border-green-500/60 text-base placeholder-gray-400 bg-white/80 backdrop-blur-sm resize-none leading-normal"
+          {/* Voice Button - LEFT */}
+          <VoiceButton
+            variant="client"
+            isActive={voiceSession.status !== "idle"}
+            isDisabled={isLoading || !selectedProfile}
+            onToggle={voiceSession.toggleSession}
           />
+
+          {/* Conditional Input Area */}
+          {voiceSession.status === "idle" ? (
+            <textarea
+              ref={textareaRef}
+              value={currentMessage}
+              onChange={(e) => setCurrentMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask me about your retirement planning goals..."
+              disabled={isLoading || !selectedProfile}
+              rows={1}
+              className="flex-1 px-4 py-3 border border-green-300/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40 focus:border-green-500/60 text-base placeholder-gray-400 bg-white/80 backdrop-blur-sm resize-none leading-normal animate-in fade-in duration-200"
+            />
+          ) : (
+            <div className="flex-1 px-4 py-2 border border-emerald-300 rounded-xl bg-white/80 backdrop-blur-sm relative overflow-hidden animate-in fade-in duration-200">
+              {/* Status pill */}
+              <div className="flex justify-center mb-1">
+                <VoiceStatusIndicator
+                  status={voiceSession.status}
+                  variant="client"
+                />
+              </div>
+
+              {/* Waveform */}
+              <VoiceWaveform
+                audioLevelRef={voiceSession.audioLevelRef}
+                variant="client"
+                isActive={voiceSession.status === "listening" || voiceSession.status === "speaking"}
+                voiceStatus={voiceSession.status}
+              />
+
+              {/* Live transcript */}
+              {voiceSession.interimTranscript && (
+                <div className="mt-1 text-center animate-in fade-in duration-150">
+                  <p className="text-xs text-emerald-600/80 truncate max-w-full px-2">
+                    {voiceSession.interimRole === "user" ? (
+                      <span className="italic">&ldquo;{voiceSession.interimTranscript}&rdquo;</span>
+                    ) : (
+                      <span>Sage: {voiceSession.interimTranscript}</span>
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Send Button - RIGHT */}
           <button
             onClick={() => sendMessage(currentMessage)}
             disabled={
-              isLoading || !currentMessage.trim() || !selectedProfile
+              isLoading || !currentMessage.trim() || !selectedProfile || voiceSession.status !== "idle"
             }
             className="bg-gradient-to-br from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-3 rounded-xl transition-all shadow-sm hover:shadow-md flex items-center justify-center"
           >
