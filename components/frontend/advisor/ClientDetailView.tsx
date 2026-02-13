@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React, { useState, useEffect, useCallback } from "react"
 import {
@@ -39,7 +39,7 @@ import {
 } from "@/components/frontend/shared/UIComponents"
 import { generateClientSummary } from "@/lib/advisorApi"
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface ClientDetailViewProps {
   client: ClientProfile
@@ -77,7 +77,7 @@ interface ConversationSummary {
   summary?: string
 }
 
-// ─── Mock Data ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Mock Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const MOCK_CONVERSATIONS: ConversationSummary[] = [
   {
@@ -201,7 +201,7 @@ const MOCK_ESCALATIONS: EscalationTicket[] = [
   },
 ]
 
-// ─── Format Helpers ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Format Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("en-US", {
@@ -237,14 +237,14 @@ function getCategoryColor(category: string): string {
   const colors: Record<string, string> = {
     general: "bg-gray-100 text-gray-700",
     risk_observation: "bg-amber-100 text-amber-700",
-    opportunity: "bg-green-100 text-green-700",
+    opportunity: "bg-emerald-100 text-emerald-700",
     compliance: "bg-red-100 text-red-700",
-    followup: "bg-blue-100 text-blue-700",
+    followup: "bg-emerald-100 text-emerald-700",
   }
   return colors[category] || colors.general
 }
 
-// ─── AI Summary Card ────────────────────────────────────────────────────────
+// â”€â”€â”€ AI Summary Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface AISummaryCardProps {
   client: ClientProfile
@@ -293,11 +293,11 @@ const AISummaryCard: React.FC<AISummaryCardProps> = ({ client, isLoading, adviso
   
   if (isLoading || isGenerating || !summary) {
     return (
-      <Card className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200">
+      <Card className="p-4 bg-gradient-to-br from-gray-50 to-emerald-50 border-emerald-200">
         <div className="flex items-center gap-2 mb-3">
-          <Sparkles className="w-4 h-4 text-indigo-600" />
-          <span className="text-sm font-medium text-indigo-900">AI Summary</span>
-          {!isMockMode && <span className="text-xs bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded">Live AI</span>}
+          <Sparkles className="w-4 h-4 text-emerald-600" />
+          <span className="text-sm font-medium text-emerald-900">AI Summary</span>
+          {!isMockMode && <span className="text-xs bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded">Live AI</span>}
         </div>
         <div className="space-y-2">
           <Skeleton className="h-4 w-full" />
@@ -309,18 +309,18 @@ const AISummaryCard: React.FC<AISummaryCardProps> = ({ client, isLoading, adviso
   }
   
   return (
-    <Card className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200">
+    <Card className="p-4 bg-gradient-to-br from-gray-50 to-emerald-50 border-emerald-200">
       <div className="flex items-center gap-2 mb-3">
-        <Sparkles className="w-4 h-4 text-indigo-600" />
-        <span className="text-sm font-medium text-indigo-900">AI Summary</span>
-        {!isMockMode && <span className="text-xs bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded">Live AI</span>}
+        <Sparkles className="w-4 h-4 text-emerald-600" />
+        <span className="text-sm font-medium text-emerald-900">AI Summary</span>
+        {!isMockMode && <span className="text-xs bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded">Live AI</span>}
       </div>
       <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{summary}</p>
     </Card>
   )
 }
 
-// ─── Financial Snapshot ─────────────────────────────────────────────────────
+// â”€â”€â”€ Financial Snapshot â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface FinancialSnapshotProps {
   client: ClientProfile
@@ -384,7 +384,7 @@ const FinancialSnapshot: React.FC<FinancialSnapshotProps> = ({ client }) => {
   )
 }
 
-// ─── Conversations Tab ──────────────────────────────────────────────────────
+// â”€â”€â”€ Conversations Tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface ConversationsTabProps {
   clientId: string
@@ -447,7 +447,7 @@ const ConversationsTab: React.FC<ConversationsTabProps> = ({ clientId, isMockMod
   )
 }
 
-// ─── Scenarios Tab ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Scenarios Tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface ScenariosTabProps {
   clientId: string
@@ -532,10 +532,10 @@ const ScenariosTab: React.FC<ScenariosTabProps> = ({ clientId, isMockMode }) => 
           : null
 
         const impactGradient = scenario.impact === "positive"
-          ? "from-emerald-500 to-emerald-600"
+          ? "from-emerald-600 to-emerald-700"
           : scenario.impact === "negative"
-          ? "from-red-500 to-red-600"
-          : "from-gray-400 to-gray-500"
+          ? "from-gray-700 to-gray-800"
+          : "from-gray-500 to-gray-600"
 
         return (
           <Card key={scenario.id} className="overflow-hidden">
@@ -549,7 +549,7 @@ const ScenariosTab: React.FC<ScenariosTabProps> = ({ clientId, isMockMode }) => 
                   <div className="flex items-center gap-2">
                     <h4 className="font-medium text-gray-900">{scenario.name}</h4>
                     {scenario.run_by === "advisor" && (
-                      <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">Advisor</span>
+                      <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">Advisor</span>
                     )}
                     {scenario.impact && (
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -565,7 +565,7 @@ const ScenariosTab: React.FC<ScenariosTabProps> = ({ clientId, isMockMode }) => 
                   {pr && (
                     <div className="flex items-center gap-4 mt-2">
                       <span className={`text-sm font-medium ${
-                        pr.success_probability >= 0.8 ? "text-green-600" :
+                        pr.success_probability >= 0.8 ? "text-emerald-600" :
                         pr.success_probability >= 0.6 ? "text-amber-600" :
                         "text-red-600"
                       }`}>
@@ -651,11 +651,11 @@ const ScenariosTab: React.FC<ScenariosTabProps> = ({ clientId, isMockMode }) => 
 
                   {/* Recommendation */}
                   {scenario.recommendation && (
-                    <div className="flex items-start gap-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
-                      <div className="w-6 h-6 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                    <div className="flex items-start gap-3 p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                      <div className="w-6 h-6 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
                       </div>
-                      <div className="text-sm text-indigo-900 leading-relaxed">
+                      <div className="text-sm text-emerald-900 leading-relaxed">
                         <span className="font-semibold">Recommendation: </span>
                         {scenario.recommendation}
                       </div>
@@ -671,7 +671,7 @@ const ScenariosTab: React.FC<ScenariosTabProps> = ({ clientId, isMockMode }) => 
   )
 }
 
-// ─── Notes Tab ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Notes Tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface NotesTabProps {
   clientId: string
@@ -748,7 +748,7 @@ const NotesTab: React.FC<NotesTabProps> = ({ clientId, advisorId, isMockMode }) 
       {!showEditor && (
         <button
           onClick={() => setShowEditor(true)}
-          className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+          className="flex items-center gap-2 text-sm text-emerald-600 hover:text-emerald-700 font-medium"
         >
           <Plus className="w-4 h-4" />
           Add Note
@@ -757,12 +757,12 @@ const NotesTab: React.FC<NotesTabProps> = ({ clientId, advisorId, isMockMode }) 
       
       {/* Note Editor */}
       {showEditor && (
-        <Card className="p-4 border-indigo-200">
+        <Card className="p-4 border-emerald-200">
           <textarea
             value={newNoteContent}
             onChange={(e) => setNewNoteContent(e.target.value)}
             placeholder="Write your note..."
-            className="w-full p-3 border rounded-lg text-sm resize-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300"
+            className="w-full p-3 border rounded-lg text-sm resize-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300"
             rows={3}
           />
           <div className="flex items-center justify-between mt-3">
@@ -790,7 +790,7 @@ const NotesTab: React.FC<NotesTabProps> = ({ clientId, advisorId, isMockMode }) 
               <button
                 onClick={handleSaveNote}
                 disabled={!newNoteContent.trim()}
-                className="px-4 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                className="px-4 py-1.5 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
               >
                 Save Note
               </button>
@@ -840,7 +840,7 @@ interface NoteCardProps {
 
 const NoteCard: React.FC<NoteCardProps> = ({ note, onTogglePin, onDelete }) => {
   return (
-    <Card className={`p-4 ${note.is_pinned ? "border-indigo-200 bg-indigo-50/50" : ""}`}>
+    <Card className={`p-4 ${note.is_pinned ? "border-emerald-200 bg-emerald-50/50" : ""}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
@@ -848,7 +848,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onTogglePin, onDelete }) => {
               {note.category.replace("_", " ")}
             </span>
             {note.is_pinned && (
-              <Pin className="w-3 h-3 text-indigo-500" />
+              <Pin className="w-3 h-3 text-emerald-500" />
             )}
           </div>
           <p className="text-sm text-gray-700">{note.content}</p>
@@ -857,7 +857,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onTogglePin, onDelete }) => {
         <div className="flex items-center gap-1">
           <button
             onClick={() => onTogglePin(note.id)}
-            className="p-1.5 text-gray-400 hover:text-indigo-600 rounded-lg hover:bg-gray-100"
+            className="p-1.5 text-gray-400 hover:text-emerald-600 rounded-lg hover:bg-gray-100"
             title={note.is_pinned ? "Unpin" : "Pin"}
           >
             <Pin className="w-4 h-4" />
@@ -875,7 +875,7 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onTogglePin, onDelete }) => {
   )
 }
 
-// ─── Escalations Tab ────────────────────────────────────────────────────────
+// â”€â”€â”€ Escalations Tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface EscalationsTabProps {
   clientId: string
@@ -924,7 +924,7 @@ const EscalationsTab: React.FC<EscalationsTabProps> = ({ clientId, isMockMode })
               <div className="flex items-center gap-2 mb-2">
                 <span className={`text-xs px-2 py-0.5 rounded-full ${
                   esc.priority === "urgent" ? "bg-red-100 text-red-700" :
-                  esc.priority === "high" ? "bg-orange-100 text-orange-700" :
+                  esc.priority === "high" ? "bg-amber-100 text-amber-700" :
                   esc.priority === "medium" ? "bg-amber-100 text-amber-700" :
                   "bg-gray-100 text-gray-700"
                 }`}>
@@ -932,8 +932,8 @@ const EscalationsTab: React.FC<EscalationsTabProps> = ({ clientId, isMockMode })
                 </span>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${
                   esc.status === "pending" ? "bg-yellow-100 text-yellow-700" :
-                  esc.status === "in_progress" ? "bg-blue-100 text-blue-700" :
-                  esc.status === "resolved" ? "bg-green-100 text-green-700" :
+                  esc.status === "in_progress" ? "bg-emerald-100 text-emerald-700" :
+                  esc.status === "resolved" ? "bg-emerald-100 text-emerald-700" :
                   "bg-gray-100 text-gray-700"
                 }`}>
                   {esc.status.replace("_", " ")}
@@ -951,7 +951,7 @@ const EscalationsTab: React.FC<EscalationsTabProps> = ({ clientId, isMockMode })
   )
 }
 
-// ─── Main Component ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const ClientDetailView: React.FC<ClientDetailViewProps> = ({
   client,
@@ -984,7 +984,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({
         
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xl font-semibold">
+            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center text-white text-xl font-semibold">
               {client.name.split(" ").map(n => n[0]).join("")}
             </div>
             <div>
@@ -995,9 +995,9 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({
               </div>
               <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
                 <span>Age {client.age}</span>
-                <span>•</span>
+                <span>·</span>
                 <RiskBadge risk={client.risk_appetite} />
-                <span>•</span>
+                <span>·</span>
                 <span>Target: Age {client.target_retire_age}</span>
               </div>
             </div>
@@ -1008,7 +1008,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({
               <Calendar className="w-4 h-4 inline mr-2" />
               Schedule Meeting
             </button>
-            <button className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+            <button className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
               <MessageSquare className="w-4 h-4 inline mr-2" />
               Send Message
             </button>
@@ -1025,7 +1025,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab.id
-                  ? "border-indigo-600 text-indigo-600"
+                  ? "border-emerald-600 text-emerald-600"
                   : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
             >

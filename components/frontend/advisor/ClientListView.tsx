@@ -74,21 +74,21 @@ const FilterBar: React.FC<FilterBarProps> = ({
             placeholder="Search clients..."
             value={filters.search}
             onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
-            className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 transition-colors text-sm"
+            className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100 transition-colors text-sm"
           />
         </div>
         <button
           onClick={() => setShowFilters(!showFilters)}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
             showFilters || activeFilterCount > 0
-              ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+              ? "border-emerald-300 bg-emerald-50 text-emerald-700"
               : "border-gray-200 hover:bg-gray-50 text-gray-600"
           }`}
         >
           <Filter className="w-4 h-4" />
           <span className="text-sm font-medium">Filters</span>
           {activeFilterCount > 0 && (
-            <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center">
+            <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center">
               {activeFilterCount}
             </span>
           )}
@@ -160,7 +160,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                 onClick={() => onSortChange(field)}
                 className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   sortField === field
-                    ? "bg-indigo-100 text-indigo-700"
+                    ? "bg-emerald-100 text-emerald-700"
                     : "hover:bg-gray-100 text-gray-600"
                 }`}
               >
@@ -210,8 +210,8 @@ const ClientRow: React.FC<ClientRowProps> = ({ client, onClick }) => {
       className="w-full flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-0"
     >
       {/* Avatar */}
-      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-100 to-indigo-200 flex items-center justify-center flex-shrink-0">
-        <span className="text-sm font-semibold text-indigo-700">
+      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center flex-shrink-0">
+        <span className="text-sm font-semibold text-emerald-700">
           {client.name.split(" ").map(n => n[0]).join("")}
         </span>
       </div>
@@ -437,7 +437,7 @@ export const ClientListView: React.FC<ClientListViewProps> = ({
                 filters.search || filters.status || filters.risk || filters.jurisdiction ? (
                   <button
                     onClick={() => setFilters({ search: "", status: undefined, risk: undefined, jurisdiction: undefined })}
-                    className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                    className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
                   >
                     Clear all filters
                   </button>

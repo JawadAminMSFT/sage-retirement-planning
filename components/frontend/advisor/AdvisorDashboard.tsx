@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useMemo } from "react"
 import {
   Users,
-  DollarSign,
   AlertTriangle,
   Calendar,
   TrendingUp,
@@ -19,10 +18,13 @@ import {
   CheckSquare,
   Lightbulb,
   BarChart3,
+  Leaf,
+  ArrowRight,
 } from "lucide-react"
 import type { AdvisorProfile, AdvisorDashboardMetrics, ClientProfile, EscalationTicket } from "@/lib/types"
 import { getAdvisorDashboard, getAdvisorClients, getPendingEscalations, generateDailyBrief, MOCK_ADVISOR, MOCK_DASHBOARD_METRICS } from "@/lib/advisorApi"
 import { Card, StatusIndicator, JurisdictionBadge, Skeleton } from "@/components/frontend/shared/UIComponents"
+import { getPerformanceForRange, type TimeRange } from "@/lib/mockPortfolio"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -32,6 +34,7 @@ interface AdvisorDashboardProps {
   onNavigateToAppointments: () => void
   onSelectClient: (client: ClientProfile) => void
   onRunScenarioAnalysis?: () => void
+  onOpenChat?: () => void
   isMockMode?: boolean
 }
 
@@ -56,6 +59,44 @@ function formatFullCurrency(value: number): string {
   }).format(value)
 }
 
+// ─── AUM Performance Chart ──────────────────────────────────────────────────
+
+function AumPerformanceChart({ data }: { data: { date: string; value: number }[] }) {
+  if (data.length < 2) return null
+  const values = data.map((d) => d.value)
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const range = max - min || 1
+  const w = 600
+  const h = 160
+  const pad = { t: 12, r: 12, b: 12, l: 12 }
+
+  const points = data.map((d, i) => ({
+    x: pad.l + (i / (data.length - 1)) * (w - pad.l - pad.r),
+    y: pad.t + (1 - (d.value - min) / range) * (h - pad.t - pad.b),
+  }))
+
+  const linePath = points
+    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
+    .join(" ")
+  const areaPath = `${linePath} L ${points[points.length - 1].x} ${h - pad.b} L ${points[0].x} ${h - pad.b} Z`
+  const isPositive = values[values.length - 1] >= values[0]
+  const color = isPositive ? "#16a34a" : "#dc2626"
+
+  return (
+    <svg width="100%" viewBox={`0 0 ${w} ${h}`} className="overflow-visible">
+      <defs>
+        <linearGradient id="aumGrad" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.15" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={areaPath} fill="url(#aumGrad)" />
+      <path d={linePath} fill="none" stroke={color} strokeWidth={2.5} strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 // ─── Metric Card ────────────────────────────────────────────────────────────
 
 interface MetricCardProps {
@@ -78,7 +119,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
   const Wrapper = onClick ? "button" : "div"
   
   return (
-    <Card className={onClick ? "hover:border-indigo-200 transition-colors cursor-pointer" : ""}>
+    <Card className={onClick ? "hover:border-emerald-200 transition-colors cursor-pointer" : ""}>
       <Wrapper onClick={onClick} className="w-full text-left">
         <div className="flex items-start gap-3">
           <div className={`w-10 h-10 rounded-lg ${iconBg} flex items-center justify-center`}>
@@ -111,8 +152,8 @@ const ClientPreview: React.FC<ClientPreviewProps> = ({ client, onClick }) => {
       onClick={onClick}
       className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors text-left"
     >
-      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-100 to-indigo-200 flex items-center justify-center">
-        <span className="text-sm font-semibold text-indigo-700">
+      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center">
+        <span className="text-sm font-semibold text-emerald-700">
           {client.name.split(" ").map(n => n[0]).join("")}
         </span>
       </div>
@@ -142,7 +183,7 @@ interface EscalationPreviewProps {
 
 const priorityColors = {
   low: "bg-gray-100 text-gray-700",
-  medium: "bg-blue-100 text-blue-700",
+  medium: "bg-emerald-100 text-emerald-700",
   high: "bg-amber-100 text-amber-700",
   urgent: "bg-red-100 text-red-700",
 }
@@ -261,25 +302,25 @@ function renderBoldText(text: string): React.ReactNode[] {
 }
 
 const SECTION_ICONS: Record<string, React.ReactNode> = {
-  "📅": <Calendar className="w-4 h-4 text-blue-600" />,
-  "🚨": <AlertTriangle className="w-4 h-4 text-red-600" />,
-  "📊": <BarChart3 className="w-4 h-4 text-indigo-600" />,
+  "📅": <Calendar className="w-4 h-4 text-emerald-600" />,
+  "🚨": <AlertTriangle className="w-4 h-4 text-emerald-600" />,
+  "📊": <BarChart3 className="w-4 h-4 text-emerald-600" />,
   "✅": <CheckSquare className="w-4 h-4 text-emerald-600" />,
-  "💡": <Lightbulb className="w-4 h-4 text-amber-600" />,
-  "🎯": <Target className="w-4 h-4 text-purple-600" />,
-  "📈": <TrendingUp className="w-4 h-4 text-green-600" />,
-  "🔔": <Bell className="w-4 h-4 text-orange-600" />,
+  "💡": <Lightbulb className="w-4 h-4 text-emerald-600" />,
+  "🎯": <Target className="w-4 h-4 text-emerald-600" />,
+  "📈": <TrendingUp className="w-4 h-4 text-emerald-600" />,
+  "🔔": <Bell className="w-4 h-4 text-emerald-600" />,
 }
 
 const SECTION_COLORS: Record<string, string> = {
-  "📅": "from-blue-500 to-blue-600",
-  "🚨": "from-red-500 to-red-600",
-  "📊": "from-indigo-500 to-indigo-600",
-  "✅": "from-emerald-500 to-emerald-600",
-  "💡": "from-amber-500 to-amber-600",
-  "🎯": "from-purple-500 to-purple-600",
-  "📈": "from-green-500 to-green-600",
-  "🔔": "from-orange-500 to-orange-600",
+  "📅": "from-emerald-600 to-emerald-700",
+  "🚨": "from-emerald-600 to-emerald-700",
+  "📊": "from-emerald-600 to-emerald-700",
+  "✅": "from-emerald-600 to-emerald-700",
+  "💡": "from-emerald-600 to-emerald-700",
+  "🎯": "from-emerald-600 to-emerald-700",
+  "📈": "from-emerald-600 to-emerald-700",
+  "🔔": "from-emerald-600 to-emerald-700",
 }
 
 interface BriefMeModalProps {
@@ -355,7 +396,7 @@ const BriefMeModal: React.FC<BriefMeModalProps> = ({ advisor, onClose, isMockMod
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm overflow-y-auto py-8">
       <div className="w-full max-w-3xl mx-4 bg-white rounded-2xl shadow-2xl overflow-hidden">
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
+        <div className="bg-gray-900 px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
@@ -363,7 +404,7 @@ const BriefMeModal: React.FC<BriefMeModalProps> = ({ advisor, onClose, isMockMod
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-white">Daily Briefing</h2>
-                <p className="text-sm text-indigo-200">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</p>
+                <p className="text-sm text-gray-400">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</p>
               </div>
             </div>
             <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
@@ -376,12 +417,12 @@ const BriefMeModal: React.FC<BriefMeModalProps> = ({ advisor, onClose, isMockMod
         <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
           {cards.length === 0 && isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 text-indigo-500 animate-spin mr-3" />
+              <Loader2 className="w-6 h-6 text-emerald-500 animate-spin mr-3" />
               <span className="text-gray-500">Generating your briefing...</span>
             </div>
           ) : (
             cards.map((card, cardIdx) => {
-              const gradient = SECTION_COLORS[card.icon || ""] || "from-gray-500 to-gray-600"
+              const gradient = SECTION_COLORS[card.icon || ""] || "from-emerald-600 to-emerald-700"
               const icon = SECTION_ICONS[card.icon || ""]
 
               return (
@@ -393,14 +434,14 @@ const BriefMeModal: React.FC<BriefMeModalProps> = ({ advisor, onClose, isMockMod
                   <div className="px-4 py-3 space-y-2">
                     {card.sections.map((s, sIdx) => {
                       if (s.type === "heading" && s.level === 3) {
-                        return <h4 key={sIdx} className="text-sm font-medium text-gray-800 mt-2 flex items-center gap-2"><Target className="w-3.5 h-3.5 text-indigo-500" />{s.title}</h4>
+                        return <h4 key={sIdx} className="text-sm font-medium text-gray-800 mt-2 flex items-center gap-2"><Target className="w-3.5 h-3.5 text-emerald-500" />{s.title}</h4>
                       }
                       if (s.type === "keyvalue" && s.items) {
                         return (
                           <div key={sIdx} className="space-y-1.5">
                             {s.items.map((it, j) => (
                               <div key={j} className="flex items-start gap-3 py-1.5 px-3 bg-gray-50 rounded-lg">
-                                <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full mt-2 flex-shrink-0" />
+                                <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mt-2 flex-shrink-0" />
                                 <div className="text-sm">
                                   {it.key && <span className="font-semibold text-gray-900">{renderBoldText(it.key)}: </span>}
                                   <span className="text-gray-600">{renderBoldText(it.value)}</span>
@@ -431,12 +472,12 @@ const BriefMeModal: React.FC<BriefMeModalProps> = ({ advisor, onClose, isMockMod
                               <div key={j} className="flex items-start gap-2.5 py-1">
                                 {it.key ? (
                                   <>
-                                    <span className="w-5 h-5 flex items-center justify-center bg-indigo-100 text-indigo-700 rounded text-xs font-bold flex-shrink-0 mt-0.5">{j + 1}</span>
+                                    <span className="w-5 h-5 flex items-center justify-center bg-emerald-100 text-emerald-700 rounded text-xs font-bold flex-shrink-0 mt-0.5">{j + 1}</span>
                                     <div className="text-sm"><span className="font-medium text-gray-900">{renderBoldText(it.key)}: </span><span className="text-gray-600">{renderBoldText(it.value)}</span></div>
                                   </>
                                 ) : (
                                   <>
-                                    <span className="text-indigo-400 mt-0.5">•</span>
+                                    <span className="text-emerald-400 mt-0.5">•</span>
                                     <span className="text-sm text-gray-600">{renderBoldText(it.value)}</span>
                                   </>
                                 )}
@@ -474,6 +515,7 @@ export const AdvisorDashboard: React.FC<AdvisorDashboardProps> = ({
   onNavigateToAppointments,
   onSelectClient,
   onRunScenarioAnalysis,
+  onOpenChat,
   isMockMode = true,
 }) => {
   const [metrics, setMetrics] = useState<AdvisorDashboardMetrics | null>(null)
@@ -527,6 +569,23 @@ export const AdvisorDashboard: React.FC<AdvisorDashboardProps> = ({
   const currentHour = new Date().getHours()
   const greeting = currentHour < 12 ? "Good morning" : currentHour < 17 ? "Good afternoon" : "Good evening"
 
+  // AUM chart state
+  const [aumTimeRange, setAumTimeRange] = useState<TimeRange>("1M")
+  const totalAum = metrics?.total_aum || 0
+  const aumPerfData = useMemo(
+    () => getPerformanceForRange(totalAum, aumTimeRange, 0.072),
+    [totalAum, aumTimeRange],
+  )
+  // Simulated daily AUM change
+  const aumChange24h = useMemo(() => {
+    if (aumPerfData.length < 2) return { amount: 0, percent: 0 }
+    const latest = aumPerfData[aumPerfData.length - 1].value
+    const prev = aumPerfData[aumPerfData.length - 2].value
+    return { amount: Math.round(latest - prev), percent: Number(((latest - prev) / prev * 100).toFixed(2)) }
+  }, [aumPerfData])
+  // YTD return (mock)
+  const ytdReturn = 7.2
+
   if (isLoading) {
     return (
       <div className="h-full overflow-y-auto">
@@ -544,32 +603,94 @@ export const AdvisorDashboard: React.FC<AdvisorDashboardProps> = ({
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="max-w-6xl mx-auto p-6 space-y-6 pb-24 md:pb-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">
-              {greeting}, {advisor.name.split(" ")[0]}
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Here's what's happening with your clients today
-            </p>
+      <div className="max-w-5xl mx-auto p-6 space-y-8 pb-24 md:pb-6">
+        {/* Greeting + Quick Stats (matches personal view) */}
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div className="flex items-end gap-4">
+            <div>
+              <h1 className="text-3xl tracking-tight text-gray-900">
+                <span className="font-normal">{greeting}, </span>
+                <span className="font-bold">{advisor.name.split(" ")[0]}!</span>
+              </h1>
+            </div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <button
+                onClick={() => setShowBriefMe(true)}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all flex items-center gap-2 text-sm font-medium shadow-sm"
+              >
+                <Sparkles className="w-4 h-4" />
+                Brief Me
+              </button>
+              <button
+                onClick={loadDashboardData}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                title="Refresh dashboard"
+              >
+                <RefreshCw className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowBriefMe(true)}
-              className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all flex items-center gap-2 text-sm font-medium shadow-sm"
-            >
-              <Sparkles className="w-4 h-4" />
-              Brief Me
-            </button>
-            <button
-              onClick={loadDashboardData}
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-              title="Refresh dashboard"
-            >
-              <RefreshCw className="w-5 h-5 text-gray-400" />
-            </button>
+          <div className="flex items-center gap-6">
+            <div className="text-right">
+              <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">YTD Return</p>
+              <p className="text-lg font-semibold text-emerald-600 tabular-nums">+{ytdReturn}%</p>
+            </div>
+            <div className="w-px h-10 bg-gray-100" />
+            <div className="text-right">
+              <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">Clients</p>
+              <p className="text-lg font-semibold text-gray-900 tabular-nums">{metrics?.client_count || 0}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* AUM Chart Card (matches personal view's Net Worth chart) */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="p-6 pb-3">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+              Assets Under Management
+            </p>
+            <div className="flex items-baseline gap-4 flex-wrap">
+              <span className="text-4xl font-bold text-gray-900 tracking-tight tabular-nums">
+                {formatFullCurrency(totalAum)}
+              </span>
+              <span
+                className={`inline-flex items-center gap-1 text-sm font-medium px-2.5 py-1 rounded-lg ${
+                  aumChange24h.amount >= 0
+                    ? "text-emerald-700 bg-emerald-50"
+                    : "text-red-700 bg-red-50"
+                }`}
+              >
+                {aumChange24h.amount >= 0 ? (
+                  <TrendingUp className="w-3.5 h-3.5" />
+                ) : (
+                  <TrendingUp className="w-3.5 h-3.5 rotate-180" />
+                )}
+                {aumChange24h.amount >= 0 ? "+" : ""}
+                {formatCurrency(aumChange24h.amount)} ({aumChange24h.percent}%) today
+              </span>
+            </div>
+          </div>
+
+          {/* Chart */}
+          <div className="px-4">
+            <AumPerformanceChart data={aumPerfData} />
+          </div>
+
+          {/* Time Range Buttons */}
+          <div className="px-6 pb-6 pt-3 flex gap-2">
+            {(["1W", "1M", "3M", "1Y", "ALL"] as TimeRange[]).map((range) => (
+              <button
+                key={range}
+                onClick={() => setAumTimeRange(range)}
+                className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ${
+                  aumTimeRange === range
+                    ? "bg-gray-900 text-white shadow-md"
+                    : "bg-gray-50 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                }`}
+              >
+                {range}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -581,17 +702,10 @@ export const AdvisorDashboard: React.FC<AdvisorDashboardProps> = ({
         )}
 
         {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <MetricCard
-            icon={<DollarSign className="w-5 h-5 text-emerald-600" />}
+            icon={<Users className="w-5 h-5 text-emerald-600" />}
             iconBg="bg-emerald-50"
-            label="Assets Under Management"
-            value={formatCurrency(metrics?.total_aum || 0)}
-            subtext={formatFullCurrency(metrics?.total_aum || 0)}
-          />
-          <MetricCard
-            icon={<Users className="w-5 h-5 text-indigo-600" />}
-            iconBg="bg-indigo-50"
             label="Total Clients"
             value={metrics?.client_count || 0}
             onClick={onNavigateToClients}
@@ -604,8 +718,8 @@ export const AdvisorDashboard: React.FC<AdvisorDashboardProps> = ({
             subtext={metrics?.pending_escalations ? "Requires attention" : "All clear"}
           />
           <MetricCard
-            icon={<Calendar className="w-5 h-5 text-blue-600" />}
-            iconBg="bg-blue-50"
+            icon={<Calendar className="w-5 h-5 text-emerald-600" />}
+            iconBg="bg-emerald-50"
             label="Today's Appointments"
             value={metrics?.today_appointments || 0}
             subtext={`${metrics?.upcoming_appointments || 0} this week`}
@@ -665,7 +779,7 @@ export const AdvisorDashboard: React.FC<AdvisorDashboardProps> = ({
                 <span className="text-xs text-gray-400 cursor-help underline decoration-dotted">How is this measured?</span>
                 <div className="absolute right-0 top-6 w-64 p-3 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 shadow-lg">
                   <p className="font-semibold mb-1">Risk Appetite Levels:</p>
-                  <p className="mb-1"><span className="text-blue-400">Low:</span> Conservative, capital preservation focus (≤40% equities)</p>
+                  <p className="mb-1"><span className="text-emerald-400">Low:</span> Conservative, capital preservation focus (≤40% equities)</p>
                   <p className="mb-1"><span className="text-yellow-400">Medium:</span> Balanced growth and stability (40-70% equities)</p>
                   <p><span className="text-red-400">High:</span> Aggressive growth focus (≥70% equities)</p>
                 </div>
@@ -673,7 +787,7 @@ export const AdvisorDashboard: React.FC<AdvisorDashboardProps> = ({
             </div>
             <div className="space-y-3">
               {[
-                { risk: "low", label: "Low Risk", color: "bg-blue-500" },
+                { risk: "low", label: "Low Risk", color: "bg-emerald-500" },
                 { risk: "medium", label: "Medium Risk", color: "bg-yellow-500" },
                 { risk: "high", label: "High Risk", color: "bg-red-500" },
               ].map(({ risk, label, color }) => {
@@ -705,17 +819,17 @@ export const AdvisorDashboard: React.FC<AdvisorDashboardProps> = ({
             <div className="space-y-2">
               <button
                 onClick={onNavigateToClients}
-                className="w-full flex items-center gap-3 p-3 rounded-lg bg-indigo-50 hover:bg-indigo-100 transition-colors text-left"
+                className="w-full flex items-center gap-3 p-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 transition-colors text-left"
               >
-                <Users className="w-5 h-5 text-indigo-600" />
-                <span className="font-medium text-indigo-700">View All Clients</span>
+                <Users className="w-5 h-5 text-emerald-600" />
+                <span className="font-medium text-emerald-700">View All Clients</span>
               </button>
               <button
                 onClick={onNavigateToAppointments}
-                className="w-full flex items-center gap-3 p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors text-left"
+                className="w-full flex items-center gap-3 p-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 transition-colors text-left"
               >
-                <Calendar className="w-5 h-5 text-blue-600" />
-                <span className="font-medium text-blue-700">Manage Appointments</span>
+                <Calendar className="w-5 h-5 text-emerald-600" />
+                <span className="font-medium text-emerald-700">Manage Appointments</span>
               </button>
               <button
                 onClick={onRunScenarioAnalysis}
@@ -728,6 +842,31 @@ export const AdvisorDashboard: React.FC<AdvisorDashboardProps> = ({
           </Card>
         </div>
 
+        {/* Sage AI CTA */}
+        <button
+          onClick={onOpenChat}
+          className="w-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl p-6 text-left text-white hover:from-gray-800 hover:via-gray-700 hover:to-gray-800 transition-all duration-300 shadow-xl shadow-gray-900/30 hover:shadow-2xl hover:shadow-gray-900/40 hover:-translate-y-0.5 group relative overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-indigo-500/20 to-transparent rounded-full blur-2xl" />
+          <div className="relative flex items-center gap-6">
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                <Leaf className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold mb-1 tracking-tight">Consult Sage for Advice</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                Get regulatory guidance, client insights, and planning strategies powered by AI.
+              </p>
+            </div>
+            <span className="flex-shrink-0 inline-flex items-center gap-2 text-sm font-medium bg-white/10 backdrop-blur-sm px-4 py-2.5 rounded-xl group-hover:bg-white/20 transition-all duration-200">
+              Open Chat
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
+            </span>
+          </div>
+        </button>
+
         {/* Clients Needing Attention & Escalations */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Attention Required */}
@@ -737,7 +876,7 @@ export const AdvisorDashboard: React.FC<AdvisorDashboardProps> = ({
                 <h3 className="font-medium text-gray-900">Clients Needing Attention</h3>
                 <button
                   onClick={onNavigateToClients}
-                  className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                  className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
                 >
                   View all
                 </button>

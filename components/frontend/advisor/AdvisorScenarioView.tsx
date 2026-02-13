@@ -1,4 +1,4 @@
-"use client"
+﻿﻿﻿"use client"
 
 import React, { useState, useEffect } from "react"
 import {
@@ -22,7 +22,7 @@ import type { ClientProfile, AdvisorProfile } from "@/lib/types"
 import { Card, StatusIndicator, JurisdictionBadge, Skeleton } from "@/components/frontend/shared/UIComponents"
 import { getAdvisorClients, generateScenarioAnalysis, MOCK_CLIENTS, type ScenarioAnalysisResult } from "@/lib/advisorApi"
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface AdvisorScenarioViewProps {
   advisor: AdvisorProfile
@@ -53,7 +53,7 @@ interface ScenarioConfig {
   category: "market" | "economic" | "sector" | "planning"
 }
 
-// ─── Cross-Client Scenario Presets (Bug 6) ──────────────────────────────────
+// â”€â”€â”€ Cross-Client Scenario Presets (Bug 6) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const SCENARIO_PRESETS: ScenarioConfig[] = [
   {
@@ -122,7 +122,7 @@ const SCENARIO_PRESETS: ScenarioConfig[] = [
   },
 ]
 
-// ─── Helper Functions ───────────────────────────────────────────────────────
+// â”€â”€â”€ Helper Functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("en-US", {
@@ -137,7 +137,7 @@ function formatPercent(value: number): string {
   return `${Math.round(value)}%`
 }
 
-// ─── Mock Scenario Generator ────────────────────────────────────────────────
+// â”€â”€â”€ Mock Scenario Generator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface ScenarioRisk {
   label: string
@@ -317,7 +317,7 @@ function generateMockScenarioResults(
   })
 }
 
-// ─── Client Selection Card ──────────────────────────────────────────────────
+// â”€â”€â”€ Client Selection Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface ClientCardProps {
   client: ClientProfile
@@ -333,17 +333,17 @@ const ClientCard: React.FC<ClientCardProps> = ({ client, isSelected, onToggle })
       onClick={onToggle}
       className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all text-left ${
         isSelected 
-          ? "border-indigo-300 bg-indigo-50 ring-2 ring-indigo-200" 
+          ? "border-emerald-300 bg-emerald-50 ring-2 ring-emerald-200" 
           : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
       }`}
     >
       <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-        isSelected ? "border-indigo-600 bg-indigo-600" : "border-gray-300"
+        isSelected ? "border-emerald-600 bg-emerald-600" : "border-gray-300"
       }`}>
         {isSelected && <CheckCircle className="w-4 h-4 text-white" />}
       </div>
-      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-100 to-indigo-200 flex items-center justify-center">
-        <span className="text-sm font-semibold text-indigo-700">
+      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center">
+        <span className="text-sm font-semibold text-emerald-700">
           {client.name.split(" ").map(n => n[0]).join("")}
         </span>
       </div>
@@ -353,7 +353,7 @@ const ClientCard: React.FC<ClientCardProps> = ({ client, isSelected, onToggle })
           <StatusIndicator status={client.status} size="sm" />
         </div>
         <div className="text-sm text-gray-500">
-          {formatCurrency(totalAssets)} • Age {client.age} • Retire at {client.target_retire_age}
+          {formatCurrency(totalAssets)} · Age {client.age} · Retire at {client.target_retire_age}
         </div>
       </div>
       <JurisdictionBadge jurisdiction={client.jurisdiction} size="sm" />
@@ -361,7 +361,7 @@ const ClientCard: React.FC<ClientCardProps> = ({ client, isSelected, onToggle })
   )
 }
 
-// ─── Scenario Result Card ───────────────────────────────────────────────────
+// â”€â”€â”€ Scenario Result Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface ResultCardProps {
   result: ScenarioResult
@@ -373,10 +373,10 @@ const ResultCard: React.FC<ResultCardProps> = ({ result, onViewClient }) => {
   const incomeDelta = result.scenario_monthly_income - result.current_monthly_income
   
   const impactGradient = result.impact === "positive"
-    ? "from-emerald-500 to-emerald-600"
+    ? "from-emerald-600 to-emerald-700"
     : result.impact === "negative"
-    ? "from-red-500 to-red-600"
-    : "from-gray-400 to-gray-500"
+    ? "from-gray-700 to-gray-800"
+    : "from-gray-500 to-gray-600"
   
   const impactIcon = result.impact === "positive"
     ? <TrendingUp className="w-4 h-4 text-white" />
@@ -457,11 +457,11 @@ const ResultCard: React.FC<ResultCardProps> = ({ result, onViewClient }) => {
         </div>
 
         {/* Recommendation */}
-        <div className="flex items-start gap-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
-          <div className="w-6 h-6 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-            <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+        <div className="flex items-start gap-3 p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+          <div className="w-6 h-6 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
           </div>
-          <div className="text-sm text-indigo-900 leading-relaxed">
+          <div className="text-sm text-gray-900 leading-relaxed">
             <span className="font-semibold">Recommendation: </span>
             {result.recommendation}
           </div>
@@ -471,7 +471,7 @@ const ResultCard: React.FC<ResultCardProps> = ({ result, onViewClient }) => {
   )
 }
 
-// ─── Main Component ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
   advisor,
@@ -645,7 +645,7 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
               <Card>
                 <div className="p-4 border-b">
                   <h2 className="font-medium text-gray-900 flex items-center gap-2">
-                    <Sliders className="w-5 h-5 text-indigo-600" />
+                    <Sliders className="w-5 h-5 text-emerald-600" />
                     1. Select Scenario
                   </h2>
                   <div className="flex gap-2 mt-3">
@@ -661,7 +661,7 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
                         onClick={() => setScenarioCategory(cat.id as typeof scenarioCategory)}
                         className={`px-3 py-1 text-xs rounded-full transition-colors ${
                           scenarioCategory === cat.id
-                            ? "bg-indigo-100 text-indigo-700 font-medium"
+                            ? "bg-emerald-100 text-emerald-700 font-medium"
                             : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                         }`}
                       >
@@ -677,13 +677,13 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
                       onClick={() => setSelectedScenario(scenario)}
                       className={`p-4 rounded-lg border-2 text-left transition-all ${
                         selectedScenario?.type === scenario.type
-                          ? "border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200"
+                          ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200"
                           : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                       }`}
                     >
                       <div className={`w-10 h-10 rounded-lg mb-2 flex items-center justify-center ${
                         selectedScenario?.type === scenario.type
-                          ? "bg-indigo-100 text-indigo-600"
+                          ? "bg-emerald-100 text-emerald-600"
                           : "bg-gray-100 text-gray-600"
                       }`}>
                         {scenario.icon}
@@ -699,13 +699,13 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
               <Card>
                 <div className="p-4 border-b flex items-center justify-between">
                   <h2 className="font-medium text-gray-900 flex items-center gap-2">
-                    <Users className="w-5 h-5 text-indigo-600" />
+                    <Users className="w-5 h-5 text-emerald-600" />
                     2. Select Clients ({selectedClients.size} selected)
                   </h2>
                   <div className="flex gap-2">
                     <button
                       onClick={selectAllClients}
-                      className="text-sm text-indigo-600 hover:text-indigo-700"
+                      className="text-sm text-emerald-600 hover:text-emerald-700"
                     >
                       Select All
                     </button>
@@ -741,7 +741,7 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
                 <button
                   onClick={runScenario}
                   disabled={!selectedScenario || selectedClients.size === 0 || isLoading}
-                  className="px-8 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-8 py-3 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isLoading ? (
                     <>
@@ -761,7 +761,7 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
             <div className="space-y-6">
               {/* Summary */}
               {summaryStats && selectedScenario && (
-                <Card className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
+                <Card className="bg-gradient-to-br from-gray-900 to-gray-800 text-white">
                   <div className="p-6">
                     <div className="flex items-center gap-2 mb-4">
                       <BarChart3 className="w-6 h-6" />
@@ -769,25 +769,25 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
                         {selectedScenario.label} Analysis Results
                       </h2>
                     </div>
-                    <p className="text-indigo-100 mb-4">{selectedScenario.description}</p>
+                    <p className="text-gray-400 mb-4">{selectedScenario.description}</p>
                     <div className="grid grid-cols-4 gap-4">
                       <div className="p-3 bg-white/10 rounded-lg">
                         <div className="text-2xl font-bold">{results.length}</div>
-                        <div className="text-sm text-indigo-100">Clients Analyzed</div>
+                        <div className="text-sm text-gray-400">Clients Analyzed</div>
                       </div>
                       <div className="p-3 bg-white/10 rounded-lg">
-                        <div className="text-2xl font-bold text-green-300">{summaryStats.improved}</div>
-                        <div className="text-sm text-indigo-100">Improved</div>
+                        <div className="text-2xl font-bold text-emerald-300">{summaryStats.improved}</div>
+                        <div className="text-sm text-gray-400">Improved</div>
                       </div>
                       <div className="p-3 bg-white/10 rounded-lg">
                         <div className="text-2xl font-bold text-red-300">{summaryStats.worsened}</div>
-                        <div className="text-sm text-indigo-100">Worsened</div>
+                        <div className="text-sm text-gray-400">Worsened</div>
                       </div>
                       <div className="p-3 bg-white/10 rounded-lg">
                         <div className="text-2xl font-bold">
                           {summaryStats.avgSuccessDelta > 0 ? "+" : ""}{summaryStats.avgSuccessDelta}%
                         </div>
-                        <div className="text-sm text-indigo-100">Avg. Success Δ</div>
+                        <div className="text-sm text-gray-400">Avg. Success Î”</div>
                       </div>
                     </div>
                   </div>
@@ -799,14 +799,14 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Assumptions */}
                   <Card className="overflow-hidden">
-                    <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2.5 flex items-center gap-2">
-                      <BarChart3 className="w-4 h-4 text-white" />
+                    <div className="bg-gray-900 px-4 py-2.5 flex items-center gap-2 rounded-t-xl">
+                      <BarChart3 className="w-4 h-4 text-emerald-400" />
                       <h3 className="text-sm font-semibold text-white">Assumptions</h3>
                     </div>
                     <div className="p-3 space-y-2">
                       {scenarioMeta.assumptions.map((a, i) => (
-                        <div key={i} className="flex items-start gap-3 py-1.5 px-3 bg-blue-50 rounded-lg">
-                          <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-2 flex-shrink-0" />
+                        <div key={i} className="flex items-start gap-3 py-1.5 px-3 bg-gray-50 rounded-lg">
+                          <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mt-2 flex-shrink-0" />
                           <div className="text-sm">
                             <span className="font-medium text-gray-900">{a.label}: </span>
                             <span className="text-gray-600">{a.value}</span>
@@ -818,13 +818,13 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
 
                   {/* Risks */}
                   <Card className="overflow-hidden">
-                    <div className="bg-gradient-to-r from-red-500 to-red-600 px-4 py-2.5 flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4 text-white" />
+                    <div className="bg-gray-900 px-4 py-2.5 flex items-center gap-2 rounded-t-xl">
+                      <AlertTriangle className="w-4 h-4 text-emerald-400" />
                       <h3 className="text-sm font-semibold text-white">Key Risks</h3>
                     </div>
                     <div className="p-3 space-y-2">
                       {scenarioMeta.risks.map((r, i) => (
-                        <div key={i} className="flex items-start gap-3 py-1.5 px-3 bg-red-50 rounded-lg">
+                        <div key={i} className="flex items-start gap-3 py-1.5 px-3 bg-gray-50 rounded-lg">
                           <span className={`text-xs font-bold px-1.5 py-0.5 rounded mt-0.5 flex-shrink-0 ${
                             r.severity === "high" ? "bg-red-200 text-red-800" :
                             r.severity === "medium" ? "bg-amber-200 text-amber-800" :
@@ -838,8 +838,8 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
 
                   {/* Opportunities */}
                   <Card className="overflow-hidden">
-                    <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2.5 flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-white" />
+                    <div className="bg-gray-900 px-4 py-2.5 flex items-center gap-2 rounded-t-xl">
+                      <Sparkles className="w-4 h-4 text-emerald-400" />
                       <h3 className="text-sm font-semibold text-white">Opportunities</h3>
                     </div>
                     <div className="p-3 space-y-2">
@@ -862,7 +862,7 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
                 <div className="space-y-4">
                   {/* Headline & Summary */}
                   <Card className="overflow-hidden">
-                    <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2.5 flex items-center gap-2">
+                    <div className="bg-gradient-to-br from-gray-900 to-gray-800 px-4 py-2.5 flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-white" />
                       <h3 className="text-sm font-semibold text-white">AI Scenario Analysis</h3>
                       <span className="text-xs bg-white/20 text-white px-2 py-0.5 rounded">Live AI</span>
@@ -873,9 +873,9 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
                       )}
                       <p className="text-sm text-gray-600 leading-relaxed">{aiAnalysis.overall_summary}</p>
                       {aiAnalysis.overall_recommendation && (
-                        <div className="flex items-start gap-2 p-3 bg-indigo-50 rounded-lg border border-indigo-100">
-                          <Target className="w-4 h-4 text-indigo-600 mt-0.5 flex-shrink-0" />
-                          <p className="text-sm text-indigo-800 font-medium">{aiAnalysis.overall_recommendation}</p>
+                        <div className="flex items-start gap-2 p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+                          <Target className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                          <p className="text-sm text-emerald-800 font-medium">{aiAnalysis.overall_recommendation}</p>
                         </div>
                       )}
                     </div>
@@ -885,7 +885,7 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
                   {aiAnalysis.client_analyses && aiAnalysis.client_analyses.length > 0 && (
                     <div>
                       <div className="flex items-center gap-2 mb-3">
-                        <div className="w-1 h-5 bg-indigo-500 rounded-full" />
+                        <div className="w-1 h-5 bg-emerald-500 rounded-full" />
                         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Per-Client Impact Analysis</h3>
                       </div>
                       <div className="grid grid-cols-1 gap-3">
@@ -903,7 +903,7 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
                           const riskColors = {
                             high: 'bg-red-100 text-red-700',
                             medium: 'bg-amber-100 text-amber-700',
-                            low: 'bg-green-100 text-green-700',
+                            low: 'bg-emerald-100 text-emerald-700',
                           }
                           return (
                             <Card key={i} className={`overflow-hidden border-l-4 ${dirColors[ca.scenario_impact.direction]}`}>
@@ -917,7 +917,7 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
                                     </span>
                                   </div>
                                   <span className={`text-xs px-2 py-1 rounded-full font-medium ${dirBg[ca.scenario_impact.direction]}`}>
-                                    {ca.scenario_impact.direction === 'positive' ? '↑' : ca.scenario_impact.direction === 'negative' ? '↓' : '→'}{' '}
+                                    {ca.scenario_impact.direction === 'positive' ? 'â†‘' : ca.scenario_impact.direction === 'negative' ? 'â†“' : 'â†’'}{' '}
                                     {ca.scenario_impact.direction}
                                   </span>
                                 </div>
@@ -929,7 +929,7 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
                                     <div className="flex items-baseline gap-1">
                                       <span className="text-sm font-semibold text-gray-900">{ca.current_outlook.success_rate}%</span>
                                       <span className={`text-[10px] font-medium ${ca.scenario_impact.success_rate_change >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                        → {ca.scenario_impact.new_success_rate}%
+                                        â†’ {ca.scenario_impact.new_success_rate}%
                                       </span>
                                     </div>
                                   </div>
@@ -944,7 +944,7 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
                                     <div className="flex items-baseline gap-1">
                                       <span className="text-sm font-semibold text-gray-900">${ca.current_outlook.monthly_income.toLocaleString()}</span>
                                       <span className={`text-[10px] font-medium ${ca.scenario_impact.income_change >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                        → ${ca.scenario_impact.new_monthly_income.toLocaleString()}
+                                        â†’ ${ca.scenario_impact.new_monthly_income.toLocaleString()}
                                       </span>
                                     </div>
                                   </div>
@@ -958,9 +958,9 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
 
                                 {/* Impact Summary & Recommendation */}
                                 <p className="text-xs text-gray-500 mb-2">{ca.scenario_impact.summary}</p>
-                                <div className="flex items-start gap-2 p-2 bg-indigo-50 rounded-lg">
-                                  <CheckCircle className="w-3.5 h-3.5 text-indigo-600 mt-0.5 flex-shrink-0" />
-                                  <p className="text-xs text-indigo-800">{ca.recommendation}</p>
+                                <div className="flex items-start gap-2 p-2 bg-emerald-50 rounded-lg">
+                                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600 mt-0.5 flex-shrink-0" />
+                                  <p className="text-xs text-emerald-800">{ca.recommendation}</p>
                                 </div>
                               </div>
                             </Card>
@@ -982,13 +982,13 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
                           {aiAnalysis.key_insights.map((insight, i) => {
                             const typeStyles = {
                               warning: 'border-l-amber-500 bg-amber-50',
-                              info: 'border-l-blue-500 bg-blue-50',
+                              info: 'border-l-emerald-500 bg-emerald-50',
                               success: 'border-l-emerald-500 bg-emerald-50',
                             }
                             const typeIcons = {
-                              warning: '⚠️',
-                              info: '💡',
-                              success: '✅',
+                              warning: 'âš ï¸',
+                              info: 'ðŸ’¡',
+                              success: 'âœ…',
                             }
                             return (
                               <div key={i} className={`p-2.5 rounded-lg border-l-4 ${typeStyles[insight.type]}`}>
@@ -1015,12 +1015,12 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
                             const prioColors = {
                               high: 'bg-red-100 text-red-700 border-red-200',
                               medium: 'bg-amber-100 text-amber-700 border-amber-200',
-                              low: 'bg-green-100 text-green-700 border-green-200',
+                              low: 'bg-emerald-100 text-emerald-700 border-emerald-200',
                             }
                             return (
                               <div key={i} className="p-2.5 bg-white rounded-lg border border-gray-200">
                                 <div className="flex items-start gap-2">
-                                  <span className="w-5 h-5 flex items-center justify-center bg-indigo-100 text-indigo-700 rounded text-xs font-bold flex-shrink-0 mt-0.5">{i + 1}</span>
+                                  <span className="w-5 h-5 flex items-center justify-center bg-emerald-100 text-emerald-700 rounded text-xs font-bold flex-shrink-0 mt-0.5">{i + 1}</span>
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm text-gray-800">{sa.action}</p>
                                     {sa.affected_clients && sa.affected_clients.length > 0 && (
@@ -1044,7 +1044,7 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
               {/* Individual Results */}
               <div>
                 <div className="flex items-center gap-2 mb-4">
-                  <div className="w-1 h-5 bg-indigo-500 rounded-full" />
+                  <div className="w-1 h-5 bg-emerald-500 rounded-full" />
                   <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Client-by-Client Impact</h3>
                   <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{results.length} clients</span>
                 </div>

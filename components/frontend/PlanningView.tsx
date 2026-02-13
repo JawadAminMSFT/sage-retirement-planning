@@ -32,6 +32,7 @@ interface PlanningViewProps {
   selectedProfile: UserProfile | null
   isMockMode: boolean
   onBack: () => void
+  embedded?: boolean
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -40,6 +41,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
   selectedProfile,
   isMockMode,
   onBack,
+  embedded = false,
 }) => {
   const [isClient, setIsClient] = useState(false)
   const [messages, setMessages] = useState<ExtendedChatMessage[]>([
@@ -400,51 +402,73 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
     }
   }
 
-  const isLiveMode = getApiMode() === "live"
-
   // ── Render ──
 
   return (
     <div className="h-full flex flex-col">
-      {/* Chat header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200/60 bg-white/60 backdrop-blur-sm">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleBack}
-            className="md:hidden w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
-          </button>
-          <h2 className="font-semibold text-gray-900">Plan with Sage</h2>
-        </div>
-        
-        {/* History & New Chat buttons */}
-        {isLiveMode && (
-          <div className="flex items-center gap-2">
+      {/* Chat header - back/title hidden when embedded, but history controls always visible */}
+      {!embedded && (
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200/60 bg-white/60 backdrop-blur-sm">
+          <div className="flex items-center gap-3">
             <button
-              onClick={() => setShowHistory(!showHistory)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                showHistory
-                  ? "bg-indigo-100 text-indigo-700"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
+              onClick={handleBack}
+              className="md:hidden w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100"
             >
-              <History className="w-4 h-4" />
-              <span className="hidden sm:inline">History</span>
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
             </button>
-            <button
-              onClick={handleNewConversation}
-              className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">New</span>
-            </button>
+            <h2 className="font-semibold text-gray-900">Consult Sage for Advice</h2>
           </div>
-        )}
-      </div>
+          
+          {/* History & New Chat buttons (standalone mode) */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowHistory(!showHistory)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  showHistory
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                <History className="w-4 h-4" />
+                <span className="hidden sm:inline">History</span>
+              </button>
+              <button
+                onClick={handleNewConversation}
+                className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">New</span>
+              </button>
+            </div>
+        </div>
+      )}
+
+      {/* History & New Chat buttons (embedded / pane mode) */}
+      {embedded && (
+        <div className="flex items-center justify-end gap-2 px-4 py-2 border-b border-gray-100 bg-white/60 backdrop-blur-sm flex-shrink-0">
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              showHistory
+                ? "bg-emerald-100 text-emerald-700"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            <History className="w-4 h-4" />
+            History
+          </button>
+          <button
+            onClick={handleNewConversation}
+            className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            New
+          </button>
+        </div>
+      )}
 
       {/* History Panel */}
-      {showHistory && isLiveMode && (
+      {showHistory && (
         <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
           <div className="max-w-4xl mx-auto">
             <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
@@ -467,7 +491,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                     key={conv.id}
                     className={`flex items-center justify-between bg-white rounded-lg px-4 py-3 border transition-colors ${
                       conv.id === currentConversationId
-                        ? "border-indigo-300 bg-indigo-50"
+                        ? "border-emerald-300 bg-emerald-50"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
                   >

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React, { useState, useEffect } from "react"
 import {
@@ -18,7 +18,7 @@ import {
 import type { EscalationTicket, EscalationStatus, EscalationPriority, ResolutionType, ClientProfile } from "@/lib/types"
 import { Card, EmptyState, Skeleton } from "@/components/frontend/shared/UIComponents"
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface EscalationQueueProps {
   advisorId: string
@@ -34,7 +34,7 @@ interface EscalationDetailModalProps {
   onUpdateStatus: (status: EscalationStatus) => void
 }
 
-// ─── Mock Data ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Mock Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const MOCK_ESCALATIONS: EscalationTicket[] = [
   {
@@ -178,7 +178,7 @@ const MOCK_CLIENTS: Record<string, ClientProfile> = {
   },
 }
 
-// ─── Helper Functions ───────────────────────────────────────────────────────
+// â”€â”€â”€ Helper Functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function formatRelativeTime(dateStr: string): string {
   const date = new Date(dateStr)
@@ -197,7 +197,7 @@ function formatRelativeTime(dateStr: string): string {
 function getPriorityColor(priority: EscalationPriority): string {
   const colors = {
     urgent: "bg-red-100 text-red-700 border-red-200",
-    high: "bg-orange-100 text-orange-700 border-orange-200",
+    high: "bg-amber-100 text-amber-700 border-amber-200",
     medium: "bg-amber-100 text-amber-700 border-amber-200",
     low: "bg-gray-100 text-gray-700 border-gray-200",
   }
@@ -207,9 +207,9 @@ function getPriorityColor(priority: EscalationPriority): string {
 function getStatusColor(status: EscalationStatus): string {
   const colors = {
     pending: "bg-yellow-100 text-yellow-700",
-    in_progress: "bg-blue-100 text-blue-700",
-    resolved: "bg-green-100 text-green-700",
-    escalated_to_compliance: "bg-purple-100 text-purple-700",
+    in_progress: "bg-emerald-100 text-emerald-700",
+    resolved: "bg-emerald-100 text-emerald-700",
+    escalated_to_compliance: "bg-gray-100 text-gray-700",
   }
   return colors[status]
 }
@@ -224,7 +224,7 @@ function getReasonLabel(reason: string): string {
   return labels[reason] || reason
 }
 
-// ─── Escalation Card ────────────────────────────────────────────────────────
+// â”€â”€â”€ Escalation Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface EscalationCardProps {
   escalation: EscalationTicket
@@ -237,7 +237,7 @@ const EscalationCard: React.FC<EscalationCardProps> = ({ escalation, client, onC
     <Card 
       className={`p-4 cursor-pointer hover:shadow-md transition-all border-l-4 ${
         escalation.priority === "urgent" ? "border-l-red-500" :
-        escalation.priority === "high" ? "border-l-orange-500" :
+        escalation.priority === "high" ? "border-l-amber-500" :
         escalation.priority === "medium" ? "border-l-amber-500" :
         "border-l-gray-400"
       }`}
@@ -261,7 +261,7 @@ const EscalationCard: React.FC<EscalationCardProps> = ({ escalation, client, onC
           {/* Client Info */}
           {client && (
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-medium text-indigo-700">
+              <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-xs font-medium text-emerald-700">
                 {client.name.split(" ").map(n => n[0]).join("")}
               </div>
               <span className="text-sm font-medium text-gray-900">{client.name}</span>
@@ -297,7 +297,7 @@ const EscalationCard: React.FC<EscalationCardProps> = ({ escalation, client, onC
   )
 }
 
-// ─── Escalation Detail Modal ────────────────────────────────────────────────
+// â”€â”€â”€ Escalation Detail Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const EscalationDetailModal: React.FC<EscalationDetailModalProps> = ({
   escalation,
@@ -341,13 +341,13 @@ const EscalationDetailModal: React.FC<EscalationDetailModalProps> = ({
           {/* Client Info */}
           {client && (
             <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-              <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-medium text-indigo-700">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-sm font-medium text-emerald-700">
                 {client.name.split(" ").map(n => n[0]).join("")}
               </div>
               <div>
                 <div className="font-medium text-gray-900">{client.name}</div>
                 <div className="text-sm text-gray-500">
-                  Age {client.age} • {client.jurisdiction} • {client.risk_appetite} risk
+                  Age {client.age} · {client.jurisdiction} · {client.risk_appetite} risk
                 </div>
               </div>
             </div>
@@ -356,7 +356,7 @@ const EscalationDetailModal: React.FC<EscalationDetailModalProps> = ({
           {/* Question */}
           <div>
             <h3 className="text-sm font-medium text-gray-700 mb-2">Client Question</h3>
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+            <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100">
               <p className="text-sm text-gray-900">{escalation.client_question}</p>
             </div>
           </div>
@@ -374,7 +374,7 @@ const EscalationDetailModal: React.FC<EscalationDetailModalProps> = ({
               <textarea
                 value={customResponse}
                 onChange={(e) => setCustomResponse(e.target.value)}
-                className="w-full p-3 bg-indigo-50 rounded-lg border border-indigo-100 text-sm resize-none"
+                className="w-full p-3 bg-emerald-50 rounded-lg border border-emerald-100 text-sm resize-none"
                 rows={4}
               />
               <p className="text-xs text-gray-500 mt-1">Edit the response before sending to client</p>
@@ -422,7 +422,7 @@ const EscalationDetailModal: React.FC<EscalationDetailModalProps> = ({
             {escalation.status === "pending" && (
               <button
                 onClick={() => onUpdateStatus("in_progress")}
-                className="px-4 py-2 text-sm text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50"
+                className="px-4 py-2 text-sm text-emerald-600 border border-emerald-200 rounded-lg hover:bg-emerald-50"
               >
                 Mark In Progress
               </button>
@@ -440,13 +440,13 @@ const EscalationDetailModal: React.FC<EscalationDetailModalProps> = ({
                 </button>
                 <button
                   onClick={() => setShowResolutionForm(true)}
-                  className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
                 >
                   <Check className="w-4 h-4 inline mr-1" />
                   Resolve
                 </button>
                 {customResponse && (
-                  <button className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                  <button className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
                     <Send className="w-4 h-4 inline mr-1" />
                     Send Response
                   </button>
@@ -463,7 +463,7 @@ const EscalationDetailModal: React.FC<EscalationDetailModalProps> = ({
                 <button
                   onClick={handleResolve}
                   disabled={!resolutionNotes.trim()}
-                  className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                  className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
                 >
                   Confirm Resolution
                 </button>
@@ -476,7 +476,7 @@ const EscalationDetailModal: React.FC<EscalationDetailModalProps> = ({
   )
 }
 
-// ─── Main Component ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const EscalationQueue: React.FC<EscalationQueueProps> = ({
   advisorId,
@@ -580,7 +580,7 @@ export const EscalationQueue: React.FC<EscalationQueueProps> = ({
           <div>
             <h1 className="text-xl font-semibold text-gray-900">Escalations</h1>
             <p className="text-sm text-gray-500">
-              {pendingCount} pending • {inProgressCount} in progress
+              {pendingCount} pending · {inProgressCount} in progress
             </p>
           </div>
         </div>

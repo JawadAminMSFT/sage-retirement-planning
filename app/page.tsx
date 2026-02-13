@@ -43,13 +43,14 @@ import { AppointmentCalendar } from "@/components/frontend/advisor/AppointmentCa
 import { AdvisorChatView } from "@/components/frontend/advisor/AdvisorChatView"
 import { AdvisorScenarioView } from "@/components/frontend/advisor/AdvisorScenarioView"
 import { AdminDashboard } from "@/components/frontend/admin/AdminDashboard"
+import { SageChatPane, SageFloatingButton } from "@/components/frontend/shared/SageChatPane"
 import { getMockClientsForAdvisor } from "@/lib/advisorApi"
 import { getPortfolioData } from "@/lib/mockPortfolio"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-type ClientView = "dashboard" | "portfolio" | "activity" | "planning"
-type AdvisorView = "advisor-dashboard" | "advisor-clients" | "advisor-client-detail" | "advisor-escalations" | "advisor-appointments" | "advisor-chat" | "advisor-scenarios"
+type ClientView = "dashboard" | "portfolio" | "activity"
+type AdvisorView = "advisor-dashboard" | "advisor-clients" | "advisor-client-detail" | "advisor-escalations" | "advisor-appointments" | "advisor-scenarios"
 type AdminView = "admin-dashboard" | "admin-products" | "admin-compliance" | "admin-regulatory" | "admin-users"
 
 interface NavItem {
@@ -62,7 +63,6 @@ const clientNavItems: NavItem[] = [
   { id: "dashboard", label: "Home", icon: LayoutDashboard },
   { id: "portfolio", label: "Portfolio", icon: PieChart },
   { id: "activity", label: "Activity", icon: Clock },
-  { id: "planning", label: "Sage AI", icon: MessageSquare },
 ]
 
 const advisorNavItems: NavItem[] = [
@@ -71,7 +71,6 @@ const advisorNavItems: NavItem[] = [
   { id: "advisor-scenarios", label: "Scenarios", icon: TrendingUp },
   { id: "advisor-escalations", label: "Escalations", icon: Bell },
   { id: "advisor-appointments", label: "Appointments", icon: Calendar },
-  { id: "advisor-chat", label: "Sage AI", icon: MessageSquare },
 ]
 
 const adminNavItems: NavItem[] = [
@@ -107,6 +106,7 @@ export default function RetirementPlanningApp() {
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [showProfileBubble, setShowProfileBubble] = useState(false)
   const [availableProfiles, setAvailableProfiles] = useState<UserProfile[]>([])
+  const [isChatPaneOpen, setIsChatPaneOpen] = useState(false)
 
   // Get current nav items based on persona
   const navItems = currentPersona === "client" 
@@ -136,6 +136,7 @@ export default function RetirementPlanningApp() {
   // ── Persona change handler ──
   const handlePersonaChange = (persona: UserRole) => {
     setCurrentPersona(persona)
+    setIsChatPaneOpen(false)
     // Reset to default view for each persona
     if (persona === "client") {
       setClientView("dashboard")
@@ -498,7 +499,13 @@ export default function RetirementPlanningApp() {
             {clientView === "dashboard" && (
               <DashboardView
                 selectedProfile={selectedProfile}
-                onNavigate={(view) => setClientView(view as ClientView)}
+                onNavigate={(view) => {
+                  if (view === "planning") {
+                    setIsChatPaneOpen(true)
+                  } else {
+                    setClientView(view as ClientView)
+                  }
+                }}
               />
             )}
             {clientView === "portfolio" && (
@@ -510,13 +517,6 @@ export default function RetirementPlanningApp() {
             {clientView === "activity" && (
               <ActivityView
                 selectedProfile={selectedProfile}
-                onBack={() => setClientView("dashboard")}
-              />
-            )}
-            {clientView === "planning" && (
-              <PlanningView
-                selectedProfile={selectedProfile}
-                isMockMode={isMockMode}
                 onBack={() => setClientView("dashboard")}
               />
             )}
@@ -535,6 +535,7 @@ export default function RetirementPlanningApp() {
                 onRunScenarioAnalysis={() => {
                   setAdvisorView("advisor-scenarios")
                 }}
+                onOpenChat={() => setIsChatPaneOpen(true)}
                 isMockMode={isMockMode}
               />
             )}
@@ -570,13 +571,6 @@ export default function RetirementPlanningApp() {
             {advisorView === "advisor-appointments" && (
               <AppointmentCalendar
                 advisorId={currentAdvisor.id}
-                isMockMode={isMockMode}
-              />
-            )}
-            {advisorView === "advisor-chat" && (
-              <AdvisorChatView
-                advisor={currentAdvisor}
-                clients={getMockClientsForAdvisor(currentAdvisor.id)}
                 isMockMode={isMockMode}
               />
             )}
@@ -646,6 +640,36 @@ export default function RetirementPlanningApp() {
           onClose={() => setShowProfileModal(false)}
         />
       )}
+
+      {/* Sage AI Floating Button & Chat Pane */}
+      {currentPersona !== "admin" && !isChatPaneOpen && (
+        <SageFloatingButton
+          onClick={() => setIsChatPaneOpen(true)}
+          variant={currentPersona === "advisor" ? "advisor" : "client"}
+        />
+      )}
+
+      <SageChatPane
+        isOpen={isChatPaneOpen}
+        onClose={() => setIsChatPaneOpen(false)}
+        variant={currentPersona === "advisor" ? "advisor" : "client"}
+      >
+        {currentPersona === "advisor" ? (
+          <AdvisorChatView
+            advisor={currentAdvisor}
+            clients={getMockClientsForAdvisor(currentAdvisor.id)}
+            isMockMode={isMockMode}
+            embedded
+          />
+        ) : (
+          <PlanningView
+            selectedProfile={selectedProfile}
+            isMockMode={isMockMode}
+            onBack={() => setIsChatPaneOpen(false)}
+            embedded
+          />
+        )}
+      </SageChatPane>
     </div>
   )
 }

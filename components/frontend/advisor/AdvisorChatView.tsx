@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useRef, useEffect } from "react"
+import React, { useState, useRef, useEffect, useCallback } from "react"
 import {
   Send,
   Loader2,
@@ -14,11 +14,22 @@ import {
   Target,
   Shield,
   ExternalLink,
+  History,
+  Plus,
+  Trash2,
 } from "lucide-react"
 import type { AdvisorProfile, ClientProfile } from "@/lib/types"
 import { Card } from "@/components/frontend/shared/UIComponents"
 import { streamAdvisorChat } from "@/lib/advisorApi"
 import type { AdvisorChatCitation } from "@/lib/advisorApi"
+import {
+  listConversations,
+  getConversation,
+  saveConversation,
+  deleteConversation,
+  getApiMode,
+  type ConversationSummary,
+} from "@/lib/api"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -26,6 +37,7 @@ interface AdvisorChatViewProps {
   advisor: AdvisorProfile
   clients: ClientProfile[]
   isMockMode?: boolean
+  embedded?: boolean
 }
 
 interface ChatMessage {
@@ -169,7 +181,7 @@ const CitationTooltip: React.FC<{
   return (
     <span className="relative inline-block">
       <button
-        className="inline-flex items-center justify-center w-[18px] h-[18px] text-[10px] font-bold text-indigo-700 bg-indigo-100 rounded-full align-super cursor-help hover:bg-indigo-200 transition-colors ml-0.5"
+        className="inline-flex items-center justify-center w-[18px] h-[18px] text-[10px] font-bold text-emerald-700 bg-emerald-100 rounded-full align-super cursor-help hover:bg-emerald-200 transition-colors ml-0.5"
         onMouseEnter={() => setShow(true)}
         onMouseLeave={() => setShow(false)}
         onClick={() => setShow(!show)}
@@ -179,7 +191,7 @@ const CitationTooltip: React.FC<{
       </button>
       {show && (
         <span className="absolute z-[100] bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 bg-gray-900 text-white text-xs rounded-lg shadow-lg p-3 pointer-events-auto">
-          <span className="block font-semibold text-indigo-300 mb-1">{citation.title}</span>
+          <span className="block font-semibold text-emerald-300 mb-1">{citation.title}</span>
           {citation.description && (
             <span className="block text-gray-300 mb-1">{citation.description}</span>
           )}
@@ -190,7 +202,7 @@ const CitationTooltip: React.FC<{
           )}
           {citation.source && (
             <a href={citation.source} target="_blank" rel="noopener noreferrer"
-              className="text-indigo-400 hover:underline text-[10px] block mt-1"
+              className="text-emerald-400 hover:underline text-[10px] block mt-1"
             >{citation.source}</a>
           )}
           {citation.jurisdiction && (
@@ -331,7 +343,7 @@ const ResponseCard: React.FC<{ message: ChatMessage }> = ({ message }) => {
                   <ul key={i} className="space-y-1 ml-1">
                     {s.items.map((it, j) => (
                       <li key={j} className="flex items-start gap-2">
-                        <span className="text-indigo-400 mt-0.5">•</span>
+                        <span className="text-emerald-400 mt-0.5">•</span>
                         <span>{renderTextWithCitations(it.value, citationMap, message.citations)}</span>
                       </li>
                     ))}
@@ -361,7 +373,7 @@ const ResponseCard: React.FC<{ message: ChatMessage }> = ({ message }) => {
       bodyParts.push(
         <div key={`h2-${idx}`} className="mt-5 mb-3 first:mt-0">
           <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider flex items-center gap-2">
-            <div className="w-1 h-4 bg-indigo-500 rounded-full" />
+            <div className="w-1 h-4 bg-emerald-500 rounded-full" />
             {renderTextWithCitations(section.title || "", citationMap, message.citations)}
           </h3>
         </div>
@@ -372,7 +384,7 @@ const ResponseCard: React.FC<{ message: ChatMessage }> = ({ message }) => {
       bodyParts.push(
         <div key={`h3-${idx}`} className="mt-4 mb-2 first:mt-0">
           <h4 className="text-sm font-medium text-gray-800 flex items-center gap-2">
-            <Target className="w-3.5 h-3.5 text-indigo-500" />
+            <Target className="w-3.5 h-3.5 text-emerald-500" />
             {renderTextWithCitations(section.title || "", citationMap, message.citations)}
           </h4>
         </div>
@@ -384,7 +396,7 @@ const ResponseCard: React.FC<{ message: ChatMessage }> = ({ message }) => {
         <div key={`kv-${idx}`} className="grid grid-cols-1 gap-2">
           {section.items.map((item, j) => (
             <div key={j} className="flex items-start gap-3 py-2 px-3 bg-gray-50 rounded-lg border border-gray-100">
-              <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full mt-2 flex-shrink-0" />
+              <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mt-2 flex-shrink-0" />
               <div className="flex-1 min-w-0 text-sm">
                 {item.key && <span className="font-semibold text-gray-900">{renderTextWithCitations(item.key, citationMap, message.citations)}: </span>}
                 <span className="text-gray-600">{renderTextWithCitations(item.value, citationMap, message.citations)}</span>
@@ -402,7 +414,7 @@ const ResponseCard: React.FC<{ message: ChatMessage }> = ({ message }) => {
             <div key={j} className="flex items-start gap-2.5 py-1">
               {item.key ? (
                 <>
-                  <span className="w-5 h-5 flex items-center justify-center bg-indigo-100 text-indigo-700 rounded text-xs font-bold flex-shrink-0 mt-0.5">{j + 1}</span>
+                  <span className="w-5 h-5 flex items-center justify-center bg-emerald-100 text-emerald-700 rounded text-xs font-bold flex-shrink-0 mt-0.5">{j + 1}</span>
                   <div className="text-sm">
                     <span className="font-medium text-gray-900">{renderTextWithCitations(item.key, citationMap, message.citations)}: </span>
                     <span className="text-gray-600">{renderTextWithCitations(item.value, citationMap, message.citations)}</span>
@@ -410,7 +422,7 @@ const ResponseCard: React.FC<{ message: ChatMessage }> = ({ message }) => {
                 </>
               ) : (
                 <>
-                  <span className="text-indigo-400 mt-0.5">•</span>
+                  <span className="text-emerald-400 mt-0.5">•</span>
                   <span className="text-sm text-gray-600">{renderTextWithCitations(item.value, citationMap, message.citations)}</span>
                 </>
               )}
@@ -430,7 +442,7 @@ const ResponseCard: React.FC<{ message: ChatMessage }> = ({ message }) => {
       <div className="max-w-[90%] w-full">
         <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
           {mainTitle && (
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-3">
+            <div className="bg-gradient-to-br from-gray-900 to-gray-800 px-5 py-3">
               <div className="flex items-center gap-3">
                 <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center">
                   <Sparkles className="w-4 h-4 text-white" />
@@ -458,11 +470,11 @@ const CitationFooter: React.FC<{ citations?: AdvisorChatCitation[] }> = ({ citat
       <div className="flex flex-wrap gap-1.5">
         {citations.map((c, i) => (
           <a key={i} href={c.source || '#'} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs bg-white text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-full hover:bg-indigo-50 transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs bg-white text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full hover:bg-emerald-50 transition-colors"
           >
-            <span className="w-4 h-4 flex items-center justify-center text-[10px] font-bold bg-indigo-100 text-indigo-700 rounded-full">{i + 1}</span>
+            <span className="w-4 h-4 flex items-center justify-center text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-full">{i + 1}</span>
             <span className="truncate max-w-[200px]">{c.title}</span>
-            <ExternalLink className="w-3 h-3 text-indigo-400 flex-shrink-0" />
+            <ExternalLink className="w-3 h-3 text-emerald-400 flex-shrink-0" />
           </a>
         ))}
       </div>
@@ -485,11 +497,17 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
   advisor,
   clients,
   isMockMode = true,
+  embedded = false,
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<"all" | "regulatory" | "client" | "planning">("all")
+  const [showHistory, setShowHistory] = useState(false)
+  const [conversationList, setConversationList] = useState<ConversationSummary[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
+  const conversationIdRef = useRef<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const msgCounter = useRef(0)
@@ -499,6 +517,70 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
   }
   
   useEffect(() => { scrollToBottom() }, [messages])
+
+  // ── Conversation history ──
+
+  useEffect(() => {
+    if (showHistory && advisor) {
+      setLoadingHistory(true)
+      listConversations(advisor.id)
+        .then(setConversationList)
+        .finally(() => setLoadingHistory(false))
+    }
+  }, [showHistory, advisor])
+
+  const autoSaveConversation = useCallback(async () => {
+    if (!advisor || getApiMode() === "mock" || messages.length <= 1) return
+    const title = messages.find(m => m.role === "user")?.content.slice(0, 50) || "Advisor Conversation"
+    const savedMessages = messages.map(m => ({
+      role: m.role,
+      content: m.content,
+      timestamp: new Date(m.timestamp).toISOString()
+    }))
+    const existingId = conversationIdRef.current
+    const id = await saveConversation(advisor.id, title, savedMessages, existingId || undefined)
+    if (id && !existingId) {
+      setCurrentConversationId(id)
+      conversationIdRef.current = id
+    }
+  }, [advisor, messages])
+
+  const handleLoadConversation = async (convId: string) => {
+    if (!advisor) return
+    const conv = await getConversation(advisor.id, convId)
+    if (conv && conv.messages) {
+      const loaded: ChatMessage[] = conv.messages.map((m: { role: string; content: string; timestamp?: string }, i: number) => ({
+        id: `loaded-${i}-${Date.now()}`,
+        role: m.role as "user" | "assistant",
+        content: m.content,
+        timestamp: m.timestamp || new Date().toISOString(),
+      }))
+      setMessages(loaded)
+      setCurrentConversationId(convId)
+      conversationIdRef.current = convId
+      setShowHistory(false)
+    }
+  }
+
+  const handleDeleteConversation = async (convId: string) => {
+    if (!advisor) return
+    await deleteConversation(advisor.id, convId)
+    setConversationList(prev => prev.filter(c => c.id !== convId))
+    if (currentConversationId === convId) {
+      setCurrentConversationId(null)
+      conversationIdRef.current = null
+    }
+  }
+
+  const handleNewConversation = async () => {
+    if (messages.length > 1 && advisor && getApiMode() === "live") {
+      await autoSaveConversation()
+    }
+    setMessages([])
+    setCurrentConversationId(null)
+    conversationIdRef.current = null
+    msgCounter.current = 0
+  }
 
   const nextId = (prefix: string) => {
     msgCounter.current += 1
@@ -553,6 +635,7 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
           citations: responseData.citations,
         }])
         setIsLoading(false)
+        setTimeout(() => autoSaveConversation(), 500)
       }, 1500)
     } else {
       let timeoutId: NodeJS.Timeout | null = null
@@ -592,7 +675,10 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
                   : m
               )
             )
-            if (isComplete) setIsLoading(false)
+            if (isComplete) {
+              setIsLoading(false)
+              setTimeout(() => autoSaveConversation(), 500)
+            }
           }
         )
       } catch (error) {
@@ -621,22 +707,117 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
   
   return (
     <div className="h-full flex flex-col bg-gray-50">
-      {/* Header */}
-      <div className="flex-shrink-0 p-4 bg-white border-b">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">Sage AI for Advisors</h1>
-            <p className="text-sm text-gray-500">Regulatory guidance, client insights, and planning strategies</p>
+      {/* Header - hidden when embedded in pane */}
+      {!embedded && (
+        <div className="flex-shrink-0 p-4 bg-white border-b">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">Sage AI for Advisors</h1>
+              <p className="text-sm text-gray-500">Regulatory guidance, client insights, and planning strategies</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowHistory(!showHistory)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  showHistory
+                    ? "bg-indigo-100 text-indigo-700"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                <History className="w-4 h-4" />
+                <span className="hidden sm:inline">History</span>
+              </button>
+              <button
+                onClick={handleNewConversation}
+                className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">New</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-      
+      )}
+
+      {/* History & New Chat buttons (embedded / pane mode) */}
+      {embedded && (
+        <div className="flex items-center justify-end gap-2 px-4 py-2 border-b border-gray-100 bg-white/60 backdrop-blur-sm flex-shrink-0">
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              showHistory
+                ? "bg-indigo-100 text-indigo-700"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            <History className="w-4 h-4" />
+            History
+          </button>
+          <button
+            onClick={handleNewConversation}
+            className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            New
+          </button>
+        </div>
+      )}
+
+      {/* History Panel */}
+      {showHistory && (
+        <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
+          <div className="max-w-4xl mx-auto">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+              <History className="w-4 h-4" />
+              Conversation History
+            </h3>
+            {loadingHistory ? (
+              <div className="flex items-center gap-2 text-gray-500 text-sm py-3">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading conversations...
+              </div>
+            ) : conversationList.length === 0 ? (
+              <p className="text-sm text-gray-500 py-3">
+                No saved conversations yet. Your chats will be automatically saved.
+              </p>
+            ) : (
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {conversationList.map(conv => (
+                  <div
+                    key={conv.id}
+                    className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
+                      currentConversationId === conv.id
+                        ? "bg-indigo-50 border-indigo-200"
+                        : "bg-white border-gray-200 hover:bg-gray-50"
+                    }`}
+                    onClick={() => handleLoadConversation(conv.id)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{conv.title}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {new Date(conv.updated_at || conv.created_at).toLocaleDateString()} · {conv.message_count} messages
+                      </p>
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeleteConversation(conv.id) }}
+                      className="ml-2 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4">
         {messages.length === 0 ? (
           <div className="max-w-2xl mx-auto">
             <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mx-auto mb-4 flex items-center justify-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl mx-auto mb-4 flex items-center justify-center">
                 <Sparkles className="w-8 h-8 text-white" />
               </div>
               <h2 className="text-xl font-semibold text-gray-900 mb-2">How can I help you today?</h2>
@@ -654,7 +835,7 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
                   onClick={() => setSelectedCategory(cat.id as typeof selectedCategory)}
                   className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
                     selectedCategory === cat.id
-                      ? "bg-indigo-100 text-indigo-700"
+                      ? "bg-emerald-100 text-emerald-700"
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                   }`}
                 >
@@ -668,9 +849,9 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
                 <button
                   key={query.id}
                   onClick={() => handleQuickQuery(query)}
-                  className="flex items-center gap-3 p-4 bg-white border rounded-xl hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors text-left"
+                  className="flex items-center gap-3 p-4 bg-white border rounded-xl hover:border-emerald-300 hover:bg-emerald-50/50 transition-colors text-left"
                 >
-                  <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600">
+                  <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600">
                     {query.icon}
                   </div>
                   <span className="text-sm font-medium text-gray-700">{query.label}</span>
@@ -685,7 +866,7 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
               if (message.role === "user") {
                 return (
                   <div key={message.id} className="flex justify-end mb-4">
-                    <div className="max-w-[80%] bg-indigo-600 text-white rounded-2xl rounded-br-sm px-4 py-3">
+                    <div className="max-w-[80%] bg-emerald-600 text-white rounded-2xl rounded-br-sm px-4 py-3">
                       <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                     </div>
                   </div>
@@ -719,13 +900,13 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask about regulations, client strategies, or planning scenarios..."
-                className="w-full px-4 py-3 pr-12 border rounded-xl resize-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300"
+                className="w-full px-4 py-3 pr-12 border rounded-xl resize-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300"
                 rows={1}
               />
               <button
                 onClick={() => handleSend()}
                 disabled={!inputValue.trim() || isLoading}
-                className="absolute right-2 bottom-2 p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="absolute right-2 bottom-2 p-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </button>

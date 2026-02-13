@@ -1,4 +1,4 @@
-"use client"
+﻿﻿"use client"
 
 import React, { useState, useEffect, useMemo } from "react"
 import {
@@ -24,7 +24,7 @@ import type { Appointment, AppointmentStatus, MeetingType, ClientProfile, PreMee
 import { Card, EmptyState, Skeleton } from "@/components/frontend/shared/UIComponents"
 import { generatePreMeetingBrief, generatePostMeetingAnalysis } from "@/lib/advisorApi"
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface AppointmentCalendarProps {
   advisorId: string
@@ -44,7 +44,7 @@ interface PostMeetingAnalysis {
   generated_at: string
 }
 
-// ─── Mock Data ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Mock Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const MOCK_CLIENTS: Record<string, ClientProfile> = {
   "demo-user": {
@@ -272,7 +272,7 @@ Jane Smith, CFP`,
   generated_at: "2026-02-10T12:00:00Z"
 }
 
-// ─── Helper Functions ───────────────────────────────────────────────────────
+// â”€â”€â”€ Helper Functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function formatTime(dateStr: string): string {
   return new Date(dateStr).toLocaleTimeString("en-US", {
@@ -311,10 +311,10 @@ function getMeetingTypeLabel(type: MeetingType): string {
 
 function getMeetingTypeColor(type: MeetingType): string {
   const colors: Record<MeetingType, string> = {
-    initial_consultation: "bg-purple-100 text-purple-700",
-    periodic_review: "bg-blue-100 text-blue-700",
+    initial_consultation: "bg-gray-100 text-gray-700",
+    periodic_review: "bg-emerald-100 text-emerald-700",
     escalation_followup: "bg-amber-100 text-amber-700",
-    scenario_planning: "bg-green-100 text-green-700",
+    scenario_planning: "bg-emerald-100 text-emerald-700",
   }
   return colors[type]
 }
@@ -322,15 +322,15 @@ function getMeetingTypeColor(type: MeetingType): string {
 function getStatusColor(status: AppointmentStatus): string {
   const colors: Record<AppointmentStatus, string> = {
     scheduled: "bg-gray-100 text-gray-700",
-    confirmed: "bg-green-100 text-green-700",
-    completed: "bg-blue-100 text-blue-700",
+    confirmed: "bg-emerald-100 text-emerald-700",
+    completed: "bg-emerald-100 text-emerald-700",
     cancelled: "bg-red-100 text-red-700",
     no_show: "bg-orange-100 text-orange-700",
   }
   return colors[status]
 }
 
-// ─── Pre-Meeting Brief Modal ────────────────────────────────────────────────
+// â”€â”€â”€ Pre-Meeting Brief Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface PreMeetingBriefModalProps {
   appointment: Appointment
@@ -501,27 +501,27 @@ const PreMeetingBriefModal: React.FC<PreMeetingBriefModalProps> = ({
   const priorityColors = {
     high: 'bg-red-100 text-red-700 border-red-200',
     medium: 'bg-amber-100 text-amber-700 border-amber-200',
-    low: 'bg-green-100 text-green-700 border-green-200',
+    low: 'bg-emerald-100 text-emerald-700 border-emerald-200',
   }
 
   const categoryIcons: Record<string, string> = {
-    performance: '📈',
-    contribution: '💰',
-    tax: '🧾',
-    risk: '⚠️',
-    planning: '🎯',
-    regulatory: '📋',
+    performance: 'ðŸ“ˆ',
+    contribution: 'ðŸ’°',
+    tax: 'ðŸ§¾',
+    risk: 'âš ï¸',
+    planning: 'ðŸŽ¯',
+    regulatory: 'ðŸ“‹',
   }
 
   const severityColors = {
     high: 'border-l-red-500 bg-red-50',
     medium: 'border-l-amber-500 bg-amber-50',
-    low: 'border-l-blue-500 bg-blue-50',
+    low: 'border-l-emerald-500 bg-emerald-50',
   }
 
   const impactColors = {
-    high: 'border-l-green-500 bg-green-50',
-    medium: 'border-l-blue-500 bg-blue-50',
+    high: 'border-l-emerald-500 bg-emerald-50',
+    medium: 'border-l-emerald-500 bg-emerald-50',
     low: 'border-l-gray-400 bg-gray-50',
   }
   
@@ -529,12 +529,12 @@ const PreMeetingBriefModal: React.FC<PreMeetingBriefModalProps> = ({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-indigo-500 to-purple-600">
+        <div className="flex items-center justify-between p-4 border-b bg-gradient-to-br from-gray-900 to-gray-800">
           <div className="flex items-center gap-3 text-white">
             <Sparkles className="w-5 h-5" />
             <div>
               <h2 className="text-lg font-semibold">Pre-Meeting Brief</h2>
-              <p className="text-sm text-indigo-100">{client.name} • {formatDate(appointment.scheduled_at)}</p>
+              <p className="text-sm text-gray-400">{client.name} · {formatDate(appointment.scheduled_at)}</p>
             </div>
             {!isMockMode && <span className="text-xs bg-white/20 px-2 py-0.5 rounded ml-2">Live AI</span>}
           </div>
@@ -559,7 +559,7 @@ const PreMeetingBriefModal: React.FC<PreMeetingBriefModalProps> = ({
               {error && <p className="text-amber-600 text-sm bg-amber-50 px-3 py-2 rounded-lg">{error}</p>}
 
               {/* Client Summary Card */}
-              <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-4 border border-indigo-100">
+              <div className="bg-gradient-to-br from-gray-50 to-emerald-50 rounded-xl p-4 border border-emerald-100">
                 <p className="text-sm text-gray-700 leading-relaxed">{brief.client_summary}</p>
               </div>
               
@@ -574,20 +574,20 @@ const PreMeetingBriefModal: React.FC<PreMeetingBriefModalProps> = ({
                     </div>
                     {brief.financial_snapshot.invested_assets != null && brief.financial_snapshot.cash_reserves != null && (
                       <div className="text-[10px] text-gray-400 mt-1">
-                        ${brief.financial_snapshot.invested_assets.toLocaleString()} invested · ${brief.financial_snapshot.cash_reserves.toLocaleString()} cash
+                        ${brief.financial_snapshot.invested_assets.toLocaleString()} invested Â· ${brief.financial_snapshot.cash_reserves.toLocaleString()} cash
                       </div>
                     )}
                   </div>
                   <div className="p-3 bg-white rounded-xl border border-gray-200 shadow-sm">
                     <div className="text-[11px] text-gray-500 font-medium">Goal Progress</div>
                     <div className="flex items-end gap-1 mt-1">
-                      <span className={`text-xl font-bold ${brief.financial_snapshot.goal_progress_percent >= 60 ? 'text-green-600' : brief.financial_snapshot.goal_progress_percent >= 40 ? 'text-amber-600' : 'text-red-600'}`}>
+                      <span className={`text-xl font-bold ${brief.financial_snapshot.goal_progress_percent >= 60 ? 'text-emerald-600' : brief.financial_snapshot.goal_progress_percent >= 40 ? 'text-amber-600' : 'text-red-600'}`}>
                         {brief.financial_snapshot.goal_progress_percent}%
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
                       <div 
-                        className={`h-1.5 rounded-full ${brief.financial_snapshot.goal_progress_percent >= 60 ? 'bg-green-500' : brief.financial_snapshot.goal_progress_percent >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
+                        className={`h-1.5 rounded-full ${brief.financial_snapshot.goal_progress_percent >= 60 ? 'bg-emerald-500' : brief.financial_snapshot.goal_progress_percent >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
                         style={{ width: `${Math.min(100, brief.financial_snapshot.goal_progress_percent)}%` }}
                       />
                     </div>
@@ -620,14 +620,14 @@ const PreMeetingBriefModal: React.FC<PreMeetingBriefModalProps> = ({
                     <div className="flex rounded-full overflow-hidden h-3">
                       {Object.entries(brief.financial_snapshot.portfolio_allocation).map(([key, val], i) => {
                         const pct = typeof val === 'number' ? (val <= 1 ? val * 100 : val) : 0
-                        const colors = ['bg-indigo-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500', 'bg-sky-500']
+                        const colors = ['bg-emerald-600', 'bg-emerald-400', 'bg-emerald-300', 'bg-gray-400', 'bg-gray-300']
                         return <div key={key} className={`${colors[i % colors.length]}`} style={{ width: `${pct}%` }} title={`${key}: ${pct.toFixed(0)}%`} />
                       })}
                     </div>
                     <div className="flex gap-4 mt-2">
                       {Object.entries(brief.financial_snapshot.portfolio_allocation).map(([key, val], i) => {
                         const pct = typeof val === 'number' ? (val <= 1 ? val * 100 : val) : 0
-                        const dotColors = ['bg-indigo-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500', 'bg-sky-500']
+                        const dotColors = ['bg-emerald-600', 'bg-emerald-400', 'bg-emerald-300', 'bg-gray-400', 'bg-gray-300']
                         return (
                           <div key={key} className="flex items-center gap-1.5 text-[11px] text-gray-600">
                             <div className={`w-2 h-2 rounded-full ${dotColors[i % dotColors.length]}`} />
@@ -644,7 +644,7 @@ const PreMeetingBriefModal: React.FC<PreMeetingBriefModalProps> = ({
                   <div className="mt-3 flex flex-wrap gap-2">
                     {brief.financial_snapshot.key_concerns.map((c, i) => (
                       <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-amber-100 text-amber-800 border border-amber-200">
-                        ⚠️ {c}
+                        âš ï¸ {c}
                       </span>
                     ))}
                   </div>
@@ -661,7 +661,7 @@ const PreMeetingBriefModal: React.FC<PreMeetingBriefModalProps> = ({
                       {brief.talking_points.map((tp, i) => (
                         <div key={i} className="p-3 bg-white rounded-lg border border-gray-200 shadow-sm">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-base">{categoryIcons[tp.category] || '💬'}</span>
+                            <span className="text-base">{categoryIcons[tp.category] || 'ðŸ’¬'}</span>
                             <span className="text-sm font-medium text-gray-900 flex-1">{tp.title}</span>
                             <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${priorityColors[tp.priority]}`}>
                               {tp.priority}
@@ -705,7 +705,7 @@ const PreMeetingBriefModal: React.FC<PreMeetingBriefModalProps> = ({
                           <div key={i} className={`p-3 rounded-lg border-l-4 ${impactColors[o.impact]}`}>
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium text-gray-900">{o.title}</span>
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${o.impact === 'high' ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-blue-100 text-blue-700 border border-blue-200'}`}>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${o.impact === 'high' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-emerald-100 text-emerald-700 border border-emerald-200'}`}>
                                 {o.impact} impact
                               </span>
                             </div>
@@ -725,7 +725,7 @@ const PreMeetingBriefModal: React.FC<PreMeetingBriefModalProps> = ({
                   <div className="bg-white rounded-xl border border-gray-200 shadow-sm divide-y divide-gray-100">
                     {brief.meeting_agenda.map((item, i) => (
                       <div key={i} className="flex items-center gap-3 px-4 py-2.5">
-                        <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                        <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-semibold flex-shrink-0">
                           {i + 1}
                         </span>
                         <span className="text-sm text-gray-700">{item}</span>
@@ -744,7 +744,7 @@ const PreMeetingBriefModal: React.FC<PreMeetingBriefModalProps> = ({
                       <div className="text-[11px] text-gray-500 font-medium mb-2">Scenarios Explored</div>
                       <div className="flex flex-wrap gap-1.5">
                         {brief.recent_activity.scenarios_explored.map((s, i) => (
-                          <span key={i} className="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md border border-indigo-100">{s}</span>
+                          <span key={i} className="text-xs bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md border border-emerald-100">{s}</span>
                         ))}
                       </div>
                     </div>
@@ -752,7 +752,7 @@ const PreMeetingBriefModal: React.FC<PreMeetingBriefModalProps> = ({
                       <div className="text-[11px] text-gray-500 font-medium mb-2">Questions Asked</div>
                       <div className="flex flex-wrap gap-1.5">
                         {brief.recent_activity.questions_asked.map((q, i) => (
-                          <span key={i} className="text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded-md border border-purple-100">{q}</span>
+                          <span key={i} className="text-xs bg-emerald-50 text-gray-700 px-2 py-1 rounded-md border border-gray-100">{q}</span>
                         ))}
                       </div>
                     </div>
@@ -769,7 +769,7 @@ const PreMeetingBriefModal: React.FC<PreMeetingBriefModalProps> = ({
                       const isStructured = typeof item === 'object'
                       return (
                         <div key={i} className="p-3 bg-amber-50 rounded-lg border border-amber-200 flex items-start gap-3">
-                          <span className="text-base mt-0.5">📋</span>
+                          <span className="text-base mt-0.5">ðŸ“‹</span>
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium text-amber-900">
                               {isStructured ? item.title : item}
@@ -805,7 +805,7 @@ const PreMeetingBriefModal: React.FC<PreMeetingBriefModalProps> = ({
           >
             Close
           </button>
-          <button className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+          <button className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
             <Video className="w-4 h-4 inline mr-2" />
             Start Meeting
           </button>
@@ -815,7 +815,7 @@ const PreMeetingBriefModal: React.FC<PreMeetingBriefModalProps> = ({
   )
 }
 
-// ─── Post-Meeting Analysis Modal ────────────────────────────────────────────
+// â”€â”€â”€ Post-Meeting Analysis Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface PostMeetingAnalysisModalProps {
   appointment: Appointment
@@ -879,7 +879,7 @@ const PostMeetingAnalysisModal: React.FC<PostMeetingAnalysisModalProps> = ({
   
   const getSentimentColor = (sentiment: string) => {
     const colors = {
-      positive: "text-green-600 bg-green-100",
+      positive: "text-emerald-600 bg-emerald-100",
       neutral: "text-gray-600 bg-gray-100",
       concerned: "text-amber-600 bg-amber-100",
     }
@@ -890,12 +890,12 @@ const PostMeetingAnalysisModal: React.FC<PostMeetingAnalysisModalProps> = ({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-green-500 to-teal-600">
+        <div className="flex items-center justify-between p-4 border-b bg-gradient-to-br from-gray-900 to-gray-800">
           <div className="flex items-center gap-3 text-white">
             <FileText className="w-5 h-5" />
             <div>
               <h2 className="text-lg font-semibold">Post-Meeting Analysis</h2>
-              <p className="text-sm text-green-100">{client.name} • {formatDate(appointment.scheduled_at)}</p>
+              <p className="text-sm text-emerald-100">{client.name} · {formatDate(appointment.scheduled_at)}</p>
             </div>
             {!isMockMode && <span className="text-xs bg-white/20 px-2 py-0.5 rounded ml-2">Live AI</span>}
           </div>
@@ -914,12 +914,12 @@ const PostMeetingAnalysisModal: React.FC<PostMeetingAnalysisModalProps> = ({
               value={meetingNotes}
               onChange={(e) => setMeetingNotes(e.target.value)}
               placeholder="Paste meeting notes, key discussion points, or transcript..."
-              className="w-full h-32 px-3 py-2 border rounded-lg text-sm resize-none focus:ring-2 focus:ring-green-200"
+              className="w-full h-32 px-3 py-2 border rounded-lg text-sm resize-none focus:ring-2 focus:ring-emerald-200"
             />
             <button
               onClick={handleGenerateAnalysis}
               disabled={!meetingNotes.trim()}
-              className="mt-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50"
+              className="mt-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50"
             >
               <Sparkles className="w-4 h-4 inline mr-2" />
               Generate Analysis
@@ -940,7 +940,7 @@ const PostMeetingAnalysisModal: React.FC<PostMeetingAnalysisModalProps> = ({
               onClick={() => setActiveTab(tab.id as typeof activeTab)}
               className={`px-4 py-3 text-sm font-medium border-b-2 ${
                 activeTab === tab.id
-                  ? "border-green-600 text-green-600"
+                  ? "border-emerald-600 text-emerald-600"
                   : "border-transparent text-gray-500 hover:text-gray-700"
               }`}
             >
@@ -977,9 +977,9 @@ const PostMeetingAnalysisModal: React.FC<PostMeetingAnalysisModalProps> = ({
                   <textarea
                     value={editedEmail}
                     onChange={(e) => setEditedEmail(e.target.value)}
-                    className="w-full h-64 px-3 py-2 border rounded-lg text-sm font-mono resize-none focus:ring-2 focus:ring-green-200"
+                    className="w-full h-64 px-3 py-2 border rounded-lg text-sm font-mono resize-none focus:ring-2 focus:ring-emerald-200"
                   />
-                  <button className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
+                  <button className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">
                     <Send className="w-4 h-4 inline mr-2" />
                     Send Email
                   </button>
@@ -1039,7 +1039,7 @@ const PostMeetingAnalysisModal: React.FC<PostMeetingAnalysisModalProps> = ({
                         <p className="text-sm text-gray-900">{item.task}</p>
                         <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
                           <span className={`px-2 py-0.5 rounded ${
-                            item.assignee === "advisor" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"
+                            item.assignee === "advisor" ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-700"
                           }`}>
                             {item.assignee === "advisor" ? "You" : "Client"}
                           </span>
@@ -1055,7 +1055,7 @@ const PostMeetingAnalysisModal: React.FC<PostMeetingAnalysisModalProps> = ({
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-gray-700">Draft Follow-up Email</h3>
-                    <button className="text-xs text-indigo-600 hover:text-indigo-700">
+                    <button className="text-xs text-emerald-600 hover:text-emerald-700">
                       <Sparkles className="w-3 h-3 inline mr-1" />
                       Regenerate
                     </button>
@@ -1084,13 +1084,13 @@ const PostMeetingAnalysisModal: React.FC<PostMeetingAnalysisModalProps> = ({
             Close
           </button>
           {activeTab === "email" && (
-            <button className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700">
+            <button className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
               <Send className="w-4 h-4 inline mr-2" />
               Send to Client
             </button>
           )}
           {activeTab === "actions" && (
-            <button className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+            <button className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
               <Check className="w-4 h-4 inline mr-2" />
               Save Action Items
             </button>
@@ -1101,7 +1101,7 @@ const PostMeetingAnalysisModal: React.FC<PostMeetingAnalysisModalProps> = ({
   )
 }
 
-// ─── Appointment Card ───────────────────────────────────────────────────────
+// â”€â”€â”€ Appointment Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface AppointmentCardProps {
   appointment: Appointment
@@ -1120,7 +1120,7 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
   const isToday = new Date(appointment.scheduled_at).toDateString() === new Date().toDateString()
   
   return (
-    <Card className={`p-4 ${isToday && !isPast ? "border-indigo-200 bg-indigo-50/30" : ""}`}>
+    <Card className={`p-4 ${isToday && !isPast ? "border-emerald-200 bg-emerald-50/30" : ""}`}>
       <div className="flex items-start gap-4">
         {/* Time */}
         <div className="text-center w-16 flex-shrink-0">
@@ -1140,7 +1140,7 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
           </div>
           
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-medium text-indigo-700">
+            <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-xs font-medium text-emerald-700">
               {client.name.split(" ").map(n => n[0]).join("")}
             </div>
             <span className="font-medium text-gray-900">{client.name}</span>
@@ -1157,7 +1157,7 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
           {!isPast && appointment.status !== "cancelled" && (
             <button
               onClick={onViewBrief}
-              className="px-3 py-1.5 text-xs bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 flex items-center gap-1"
+              className="px-3 py-1.5 text-xs bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 flex items-center gap-1"
             >
               <Sparkles className="w-3 h-3" />
               Pre-Brief
@@ -1166,14 +1166,14 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
           {appointment.status === "completed" && (
             <button
               onClick={onViewAnalysis}
-              className="px-3 py-1.5 text-xs bg-green-100 text-green-700 rounded-lg hover:bg-green-200 flex items-center gap-1"
+              className="px-3 py-1.5 text-xs bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 flex items-center gap-1"
             >
               <FileText className="w-3 h-3" />
               Analysis
             </button>
           )}
           {isToday && !isPast && appointment.status !== "cancelled" && (
-            <button className="px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-1">
+            <button className="px-3 py-1.5 text-xs bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 flex items-center gap-1">
               <Video className="w-3 h-3" />
               Join
             </button>
@@ -1184,7 +1184,7 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
   )
 }
 
-// ─── Main Component ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
   advisorId,
@@ -1278,10 +1278,10 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
           <div>
             <h1 className="text-xl font-semibold text-gray-900">Appointments</h1>
             <p className="text-sm text-gray-500">
-              {todayCount} today • {upcomingCount} upcoming
+              {todayCount} today · {upcomingCount} upcoming
             </p>
           </div>
-          <button className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+          <button className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
             <Plus className="w-4 h-4 inline mr-2" />
             New Appointment
           </button>
@@ -1307,16 +1307,16 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                   onClick={() => setCurrentDate(date)}
                   className={`w-12 py-2 rounded-lg text-center transition-colors ${
                     isToday
-                      ? "bg-indigo-600 text-white"
+                      ? "bg-emerald-600 text-white"
                       : currentDate.toDateString() === date.toDateString()
-                      ? "bg-indigo-100 text-indigo-700"
+                      ? "bg-emerald-100 text-emerald-700"
                       : "hover:bg-gray-100"
                   }`}
                 >
                   <div className="text-xs">{date.toLocaleDateString("en-US", { weekday: "short" })}</div>
                   <div className="text-lg font-semibold">{date.getDate()}</div>
                   {hasAppointments && !isToday && (
-                    <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full mx-auto mt-1" />
+                    <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mx-auto mt-1" />
                   )}
                 </button>
               )
