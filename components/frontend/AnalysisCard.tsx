@@ -2,6 +2,7 @@
 
 import React from "react"
 import { Bot, BarChart3, Clock, Zap, Loader2, CheckCircle } from "lucide-react"
+import { PoweredByLabel } from "@/components/frontend/shared/PoweredByLabel"
 import MetricCard from "@/components/frontend/MetricCard"
 import { CashflowChart } from "@/components/frontend/CashflowChart"
 import type { AnalysisDisplayData } from "@/lib/analysis"
@@ -61,6 +62,7 @@ function AllocationSection({
         <h4 className="text-lg font-semibold text-gray-900">
           Recommended Allocation
         </h4>
+        <PoweredByLabel product="Fabric IQ" variant="inline" />
       </div>
       <div className="bg-white border border-gray-200 rounded-xl p-5">
         {/* Stacked bar */}
@@ -212,6 +214,7 @@ export const AnalysisCard: React.FC<AnalysisCardProps> = ({
               </div>
             )}
 
+            <PoweredByLabel product="Copilot" variant="dark" />
             <span className="px-3 py-1 bg-white/20 text-white text-sm font-medium rounded-full">
               {analysis.riskLevel}
             </span>
@@ -333,6 +336,7 @@ export const AnalysisCard: React.FC<AnalysisCardProps> = ({
             <h4 className="text-lg font-semibold text-gray-900">
               Projected Cash Flows
             </h4>
+            <PoweredByLabel product="Fabric IQ" variant="inline" />
           </div>
           <div
             className="bg-gray-50 rounded-xl p-5 border border-gray-200"

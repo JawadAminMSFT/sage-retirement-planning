@@ -2,6 +2,7 @@
 
 import React, { useEffect } from "react"
 import { X, Leaf } from "lucide-react"
+import { PoweredByLabel } from "@/components/frontend/shared/PoweredByLabel"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -90,7 +91,10 @@ export const SageChatPane: React.FC<SageChatPaneProps> = ({
               </div>
               <div>
                 <h2 className="text-sm font-semibold text-white tracking-tight">Sage AI</h2>
-                <p className="text-[11px] text-gray-400">Retirement Planning Assistant</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-[11px] text-gray-400">Retirement Planning Assistant</p>
+                  <PoweredByLabel product="Copilot" variant="dark" />
+                </div>
               </div>
             </div>
             <button

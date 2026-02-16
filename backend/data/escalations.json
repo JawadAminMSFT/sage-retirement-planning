@@ -93,5 +93,24 @@
     "created_at": "2026-02-12T08:00:00Z",
     "acknowledged_at": null,
     "resolved_at": null
+  },
+  {
+    "id": "b5312935-39c3-455f-b4c5-263ff0555d04",
+    "client_id": "demo-user",
+    "advisor_id": "advisor-jane",
+    "source_conversation_id": null,
+    "reason": "user_requested",
+    "trigger_message": null,
+    "ai_confidence_score": null,
+    "context_summary": "Client consented to share a complex scenario analysis and requested advisor review for follow-up discussion.",
+    "client_question": "What if I retire 2 years earlier?",
+    "suggested_response": null,
+    "status": "pending",
+    "priority": "medium",
+    "resolution_notes": null,
+    "resolution_type": null,
+    "created_at": "2026-02-16T23:25:06.925495",
+    "acknowledged_at": null,
+    "resolved_at": null
   }
 ]

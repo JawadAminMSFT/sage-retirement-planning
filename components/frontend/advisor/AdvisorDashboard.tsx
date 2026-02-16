@@ -22,8 +22,9 @@ import {
   ArrowRight,
 } from "lucide-react"
 import type { AdvisorProfile, AdvisorDashboardMetrics, ClientProfile, EscalationTicket } from "@/lib/types"
-import { getAdvisorDashboard, getAdvisorClients, getPendingEscalations, generateDailyBrief, MOCK_ADVISOR, MOCK_DASHBOARD_METRICS } from "@/lib/advisorApi"
+import { getAdvisorDashboard, getAdvisorClients, getPendingEscalations, generateDailyBrief, MOCK_ADVISOR, MOCK_DASHBOARD_METRICS, getMockScenarioShareEscalations } from "@/lib/advisorApi"
 import { Card, StatusIndicator, JurisdictionBadge, Skeleton } from "@/components/frontend/shared/UIComponents"
+import { PoweredByLabel } from "@/components/frontend/shared/PoweredByLabel"
 import { getPerformanceForRange, type TimeRange } from "@/lib/mockPortfolio"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -403,7 +404,10 @@ const BriefMeModal: React.FC<BriefMeModalProps> = ({ advisor, onClose, isMockMod
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-white">Daily Briefing</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-semibold text-white">Daily Briefing</h2>
+                  <PoweredByLabel product="Work IQ" variant="dark" />
+                </div>
                 <p className="text-sm text-gray-400">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</p>
               </div>
             </div>
@@ -536,10 +540,16 @@ export const AdvisorDashboard: React.FC<AdvisorDashboardProps> = ({
     try {
       if (isMockMode) {
         // Use mock data
-        setMetrics(MOCK_DASHBOARD_METRICS)
+        const mockShareEscalations = getMockScenarioShareEscalations(advisor.id)
+        setMetrics({
+          ...MOCK_DASHBOARD_METRICS,
+          pending_escalations:
+            MOCK_DASHBOARD_METRICS.pending_escalations +
+            mockShareEscalations.filter(e => e.status === "pending" || e.status === "in_progress").length,
+        })
         // Mock clients will come from API in non-mock mode
         setClients([])
-        setEscalations([])
+        setEscalations(mockShareEscalations)
       } else {
         const [metricsData, clientsData, escalationsData] = await Promise.all([
           getAdvisorDashboard(advisor.id),

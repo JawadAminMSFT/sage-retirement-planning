@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import type { AdvisorProfile, ClientProfile } from "@/lib/types"
 import { Card } from "@/components/frontend/shared/UIComponents"
+import { PoweredByLabel } from "@/components/frontend/shared/PoweredByLabel"
 import { streamAdvisorChat } from "@/lib/advisorApi"
 import type { AdvisorChatCitation } from "@/lib/advisorApi"
 import {
@@ -466,6 +467,7 @@ const CitationFooter: React.FC<{ citations?: AdvisorChatCitation[] }> = ({ citat
     <div className="px-5 py-3 bg-gray-50 border-t border-gray-100">
       <p className="text-xs text-gray-500 mb-2 flex items-center gap-1.5">
         <Shield className="w-3.5 h-3.5" /> Regulatory Sources
+        <PoweredByLabel product="Foundry IQ" variant="inline" className="ml-1" />
       </p>
       <div className="flex flex-wrap gap-1.5">
         {citations.map((c, i) => (
@@ -712,7 +714,10 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
         <div className="flex-shrink-0 p-4 bg-white border-b">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">Sage AI for Advisors</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-xl font-semibold text-gray-900">Sage AI for Advisors</h1>
+                <PoweredByLabel product="Copilot" variant="light" />
+              </div>
               <p className="text-sm text-gray-500">Regulatory guidance, client insights, and planning strategies</p>
             </div>
             <div className="flex items-center gap-2">
@@ -912,9 +917,11 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
               </button>
             </div>
           </div>
-          <p className="text-xs text-gray-400 mt-2 text-center">
-            Sage AI provides guidance based on current regulations. Always verify advice and document recommendations.
-          </p>
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <p className="text-xs text-gray-400 text-center">
+              Sage AI provides guidance based on current regulations. Always verify advice and document recommendations.
+            </p>
+          </div>
         </div>
       </div>
     </div>

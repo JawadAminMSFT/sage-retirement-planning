@@ -2,6 +2,7 @@
 
 import React from "react"
 import { Zap } from "lucide-react"
+import { PoweredByLabel } from "@/components/frontend/shared/PoweredByLabel"
 
 interface QuickScenariosCardProps {
   scenarios: string[]
@@ -18,6 +19,7 @@ export const QuickScenariosCard: React.FC<QuickScenariosCardProps> = ({
         <Zap className="w-4 h-4 text-white" />
       </div>
       <h3 className="text-base font-bold text-gray-900">Explore Scenarios</h3>
+      <PoweredByLabel product="Copilot" variant="inline" className="ml-auto" />
     </div>
     <p className="text-sm text-gray-500 mb-5 ml-11">
       Ask me anything — or try one of these common questions:

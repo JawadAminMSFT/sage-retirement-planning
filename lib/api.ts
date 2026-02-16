@@ -41,6 +41,7 @@ export interface UserProfile {
   target_retire_age: number
   target_monthly_income: number
   description?: string
+  advisor_id?: string
 }
 
 export interface ProductRecommendation {
@@ -607,6 +608,112 @@ export interface SavedScenario {
   timeframe_months: number
   projection_result: ScenarioProjectionResponse
   created_at: string
+}
+
+export interface ScenarioConsentRequest {
+  user_id: string
+  advisor_id?: string
+  scenario_description: string
+  analysis_payload: Record<string, any>
+  consent_status: "accepted" | "rejected"
+}
+
+export interface ScenarioConsentResponse {
+  id: string
+  consent_status: "accepted" | "rejected"
+  advisor_id: string
+  escalation_id?: string | null
+}
+
+const MOCK_SHARED_SCENARIOS_KEY = "mock_shared_scenarios"
+const MOCK_ESCALATIONS_KEY = "mock_escalations"
+
+const getDefaultAdvisorIdForUser = (userId: string): string => {
+  if (userId === "high-earner") return "advisor-mike"
+  return "advisor-jane"
+}
+
+const readLocalArray = (key: string): any[] => {
+  if (typeof window === "undefined") return []
+  try {
+    const raw = localStorage.getItem(key)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+const writeLocalArray = (key: string, value: any[]) => {
+  if (typeof window === "undefined") return
+  localStorage.setItem(key, JSON.stringify(value))
+}
+
+export const submitScenarioConsent = async (
+  request: ScenarioConsentRequest,
+): Promise<ScenarioConsentResponse> => {
+  if (currentApiMode === "mock") {
+    await simulateDelay(250)
+    const advisorId = request.advisor_id || getDefaultAdvisorIdForUser(request.user_id)
+    const consentId = `consent-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    const consentRecord = {
+      id: consentId,
+      user_id: request.user_id,
+      advisor_id: advisorId,
+      scenario_description: request.scenario_description,
+      analysis_payload: request.analysis_payload || {},
+      consent_status: request.consent_status,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      escalation_id: null as string | null,
+    }
+
+    if (request.consent_status === "accepted") {
+      const escalationId = `esc-consent-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+      consentRecord.escalation_id = escalationId
+      const escalations = readLocalArray(MOCK_ESCALATIONS_KEY)
+      escalations.push({
+        id: escalationId,
+        client_id: request.user_id,
+        advisor_id: advisorId,
+        reason: "user_requested",
+        context_summary:
+          "Client consented to share a complex scenario analysis and requested advisor review.",
+        client_question: request.scenario_description,
+        status: "pending",
+        priority: "medium",
+        created_at: new Date().toISOString(),
+      })
+      writeLocalArray(MOCK_ESCALATIONS_KEY, escalations)
+    }
+
+    const shares = readLocalArray(MOCK_SHARED_SCENARIOS_KEY)
+    shares.push(consentRecord)
+    writeLocalArray(MOCK_SHARED_SCENARIOS_KEY, shares)
+
+    return {
+      id: consentId,
+      consent_status: request.consent_status,
+      advisor_id: advisorId,
+      escalation_id: consentRecord.escalation_id,
+    }
+  }
+
+  const response = await makeApiCall(`/api/scenario-consent/${request.user_id}`, {
+    method: "POST",
+    body: JSON.stringify({
+      advisor_id: request.advisor_id,
+      scenario_description: request.scenario_description,
+      analysis_payload: request.analysis_payload,
+      consent_status: request.consent_status,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Failed to submit consent: HTTP ${response.status}`)
+  }
+
+  return await response.json()
 }
 
 export const listSavedScenarios = async (userId: string): Promise<SavedScenarioSummary[]> => {

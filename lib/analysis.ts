@@ -55,6 +55,12 @@ export interface ExtendedChatMessage {
   showQuickScenarios?: boolean
   isStatus?: boolean
   evaluationContext?: { thread_id: string; run_id: string } | null
+  consentRequest?: {
+    status: "pending" | "accepted" | "rejected" | "submitting"
+    scenario_description: string
+    analysis_payload?: Record<string, any>
+    escalation_id?: string | null
+  } | null
 }
 
 // ─── Formatters ─────────────────────────────────────────────────────────────
