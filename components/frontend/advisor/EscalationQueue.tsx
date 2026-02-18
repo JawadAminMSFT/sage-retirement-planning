@@ -17,6 +17,8 @@ import {
 } from "lucide-react"
 import type { EscalationTicket, EscalationStatus, EscalationPriority, ResolutionType, ClientProfile } from "@/lib/types"
 import { Card, EmptyState, Skeleton } from "@/components/frontend/shared/UIComponents"
+import { PoweredByLabel } from "@/components/frontend/shared/PoweredByLabel"
+import { getMockScenarioShareEscalations } from "@/lib/advisorApi"
 
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -286,6 +288,7 @@ const EscalationCard: React.FC<EscalationCardProps> = ({ escalation, client, onC
                 escalation.ai_confidence_score < 0.7 ? "text-amber-600" : "text-gray-500"
               }`}>
                 AI Confidence: {(escalation.ai_confidence_score * 100).toFixed(0)}%
+                <PoweredByLabel product="Microsoft Graph" variant="inline" className="ml-1" />
               </span>
             )}
           </div>
@@ -498,7 +501,15 @@ export const EscalationQueue: React.FC<EscalationQueueProps> = ({
   const loadEscalations = () => {
     setIsLoading(true)
     setTimeout(() => {
-      setEscalations(MOCK_ESCALATIONS)
+      const shareEscalations = getMockScenarioShareEscalations(advisorId)
+      const combined = [...shareEscalations, ...MOCK_ESCALATIONS]
+      const seen = new Set<string>()
+      const deduped = combined.filter((e) => {
+        if (seen.has(e.id)) return false
+        seen.add(e.id)
+        return true
+      })
+      setEscalations(deduped)
       setIsLoading(false)
     }, 500)
   }
@@ -578,7 +589,10 @@ export const EscalationQueue: React.FC<EscalationQueueProps> = ({
       <div className="flex-shrink-0 p-4 bg-white border-b">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">Escalations</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl font-semibold text-gray-900">Escalations</h1>
+              <PoweredByLabel product="Microsoft Graph" variant="light" />
+            </div>
             <p className="text-sm text-gray-500">
               {pendingCount} pending · {inProgressCount} in progress
             </p>

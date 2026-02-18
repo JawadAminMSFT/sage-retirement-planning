@@ -22,6 +22,7 @@ import {
 } from "lucide-react"
 import type { Appointment, AppointmentStatus, MeetingType, ClientProfile, PreMeetingBrief } from "@/lib/types"
 import { Card, EmptyState, Skeleton } from "@/components/frontend/shared/UIComponents"
+import { PoweredByLabel } from "@/components/frontend/shared/PoweredByLabel"
 import { generatePreMeetingBrief, generatePostMeetingAnalysis } from "@/lib/advisorApi"
 
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -533,7 +534,10 @@ const PreMeetingBriefModal: React.FC<PreMeetingBriefModalProps> = ({
           <div className="flex items-center gap-3 text-white">
             <Sparkles className="w-5 h-5" />
             <div>
-              <h2 className="text-lg font-semibold">Pre-Meeting Brief</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold">Pre-Meeting Brief</h2>
+                <PoweredByLabel product="Work IQ" variant="dark" />
+              </div>
               <p className="text-sm text-gray-400">{client.name} · {formatDate(appointment.scheduled_at)}</p>
             </div>
             {!isMockMode && <span className="text-xs bg-white/20 px-2 py-0.5 rounded ml-2">Live AI</span>}
@@ -894,7 +898,10 @@ const PostMeetingAnalysisModal: React.FC<PostMeetingAnalysisModalProps> = ({
           <div className="flex items-center gap-3 text-white">
             <FileText className="w-5 h-5" />
             <div>
-              <h2 className="text-lg font-semibold">Post-Meeting Analysis</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold">Post-Meeting Analysis</h2>
+                <PoweredByLabel product="Work IQ" variant="dark" />
+              </div>
               <p className="text-sm text-emerald-100">{client.name} · {formatDate(appointment.scheduled_at)}</p>
             </div>
             {!isMockMode && <span className="text-xs bg-white/20 px-2 py-0.5 rounded ml-2">Live AI</span>}

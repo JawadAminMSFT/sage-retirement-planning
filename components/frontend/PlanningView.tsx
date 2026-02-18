@@ -16,6 +16,7 @@ import {
   deleteConversation,
   type ConversationSummary,
   getApiMode,
+  submitScenarioConsent,
 } from "@/lib/api"
 import {
   type ExtendedChatMessage,
@@ -290,6 +291,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
       try {
         let accumulatedContent = ""
         let finalAnalysis: AnalysisDisplayData | null = null
+        let finalRawAnalysis: Record<string, any> | null = null
 
         const streamGenerator = chatWithAssistantStreaming({
           message,
@@ -329,6 +331,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
 
             case "analysis":
               if (update.data.analysis && selectedProfile) {
+                finalRawAnalysis = update.data.analysis
                 finalAnalysis = convertAnalysisToDisplayData(
                   update.data.analysis,
                   selectedProfile,
@@ -350,13 +353,17 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
               setCurrentStatus(null)
               if (
                 update.data.analysis &&
-                !finalAnalysis &&
                 selectedProfile
               ) {
-                finalAnalysis = convertAnalysisToDisplayData(
-                  update.data.analysis,
-                  selectedProfile,
-                )
+                if (!finalRawAnalysis) {
+                  finalRawAnalysis = update.data.analysis
+                }
+                if (!finalAnalysis) {
+                  finalAnalysis = convertAnalysisToDisplayData(
+                    update.data.analysis,
+                    selectedProfile,
+                  )
+                }
               }
               setMessages((prev) => {
                 const next = [...prev]
@@ -365,6 +372,13 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                   last.content =
                     update.data.response || accumulatedContent
                   if (finalAnalysis) last.analysis = finalAnalysis
+                  if (finalRawAnalysis) {
+                    last.consentRequest = {
+                      status: "pending",
+                      scenario_description: message,
+                      analysis_payload: finalRawAnalysis,
+                    }
+                  }
                   if (update.data.evaluation_context)
                     last.evaluationContext = update.data.evaluation_context
                 } else if (finalAnalysis) {
@@ -377,6 +391,13 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                     showQuickScenarios: false,
                     evaluationContext:
                       update.data.evaluation_context || null,
+                    consentRequest: finalRawAnalysis
+                      ? {
+                          status: "pending",
+                          scenario_description: message,
+                          analysis_payload: finalRawAnalysis,
+                        }
+                      : null,
                   })
                 }
                 return next
@@ -405,6 +426,72 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
       }
     },
     [isLoading, selectedProfile, messages, autoSaveConversation],
+  )
+
+  const handleConsentDecision = useCallback(
+    async (messageIndex: number, decision: "accepted" | "rejected") => {
+      if (!selectedProfile) return
+
+      const current = messages[messageIndex]
+      const consentRequest = current?.consentRequest
+      if (!consentRequest || consentRequest.status !== "pending") return
+
+      setMessages((prev) => {
+        const next = [...prev]
+        const target = next[messageIndex]
+        if (target?.consentRequest) {
+          target.consentRequest = {
+            ...target.consentRequest,
+            status: "submitting",
+          }
+        }
+        return next
+      })
+
+      try {
+        const result = await submitScenarioConsent({
+          user_id: selectedProfile.id,
+          advisor_id: selectedProfile.advisor_id,
+          scenario_description: consentRequest.scenario_description,
+          analysis_payload: consentRequest.analysis_payload || {},
+          consent_status: decision,
+        })
+
+        setMessages((prev) => {
+          const next = [...prev]
+          const target = next[messageIndex]
+          if (target?.consentRequest) {
+            target.consentRequest = {
+              ...target.consentRequest,
+              status: decision,
+              escalation_id: result.escalation_id,
+            }
+          }
+          return next
+        })
+      } catch (error) {
+        console.error("Failed to submit scenario consent:", error)
+        setMessages((prev) => {
+          const next = [...prev]
+          const target = next[messageIndex]
+          if (target?.consentRequest) {
+            target.consentRequest = {
+              ...target.consentRequest,
+              status: "pending",
+            }
+          }
+          next.push({
+            role: "assistant",
+            content: "I couldn’t submit your consent decision right now. Please try again.",
+            timestamp: Date.now(),
+            analysis: null,
+            showQuickScenarios: false,
+          })
+          return next
+        })
+      }
+    },
+    [messages, selectedProfile],
   )
 
   // ── Evaluate ──
@@ -632,6 +719,50 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                     onEvaluate={handleEvaluateMessage}
                     onSendMessage={sendMessage}
                   />
+                )}
+
+                {message.role === "assistant" && message.consentRequest && (
+                  <div className="mt-4 p-4 rounded-2xl border border-emerald-200 bg-emerald-50/70">
+                    <h4 className="text-sm font-semibold text-emerald-900">
+                      This scenario looks complex — share with your advisor?
+                    </h4>
+                    <p className="text-sm text-emerald-800 mt-1 leading-relaxed">
+                      With your consent, Sage will share this scenario analysis with your advisor so they can review it and follow up with you.
+                    </p>
+
+                    {message.consentRequest.status === "pending" && (
+                      <div className="mt-3 flex items-center gap-2">
+                        <button
+                          onClick={() => handleConsentDecision(index, "accepted")}
+                          className="px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700"
+                        >
+                          Yes, share with advisor
+                        </button>
+                        <button
+                          onClick={() => handleConsentDecision(index, "rejected")}
+                          className="px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                        >
+                          No, keep private
+                        </button>
+                      </div>
+                    )}
+
+                    {message.consentRequest.status === "submitting" && (
+                      <p className="mt-3 text-sm text-emerald-700">Submitting your choice...</p>
+                    )}
+
+                    {message.consentRequest.status === "accepted" && (
+                      <p className="mt-3 text-sm text-emerald-700 font-medium">
+                        Shared with your advisor. They have been notified for review and follow-up.
+                      </p>
+                    )}
+
+                    {message.consentRequest.status === "rejected" && (
+                      <p className="mt-3 text-sm text-gray-700 font-medium">
+                        Kept private. This scenario will not be shared with your advisor.
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

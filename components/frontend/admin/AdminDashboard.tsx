@@ -26,6 +26,7 @@ import {
 } from "lucide-react"
 import type { AdminProfile, RegulatoryRule, ComplianceReviewItem, InvestmentProduct } from "@/lib/types"
 import { Card, EmptyState, Skeleton } from "@/components/frontend/shared/UIComponents"
+import { PoweredByLabel } from "@/components/frontend/shared/PoweredByLabel"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -653,7 +654,10 @@ const ComplianceQueue: React.FC<ComplianceQueueProps> = ({ isMockMode }) => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Compliance Review Queue</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-gray-900">Compliance Review Queue</h2>
+            <PoweredByLabel product="Foundry IQ" variant="light" />
+          </div>
           <p className="text-sm text-gray-500">
             {pendingCount} pending • {highRiskCount} high risk
           </p>
@@ -773,6 +777,7 @@ const ComplianceReviewModal: React.FC<ComplianceReviewModalProps> = ({ item, onC
           <div className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-indigo-600" />
             <h2 className="text-lg font-semibold text-gray-900">Compliance Review</h2>
+            <PoweredByLabel product="Foundry IQ" variant="light" />
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
             <X className="w-5 h-5 text-gray-500" />
@@ -915,7 +920,10 @@ const RegulatoryRulesView: React.FC<RegulatoryRulesViewProps> = ({ isMockMode = 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Regulatory Rules</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-gray-900">Regulatory Rules</h2>
+            <PoweredByLabel product="Foundry IQ" variant="light" />
+          </div>
           <p className="text-sm text-gray-500">US and Canadian retirement planning regulations</p>
         </div>
         <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 flex items-center gap-2">

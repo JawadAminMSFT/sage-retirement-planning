@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import type { ClientProfile, AdvisorProfile } from "@/lib/types"
 import { Card, StatusIndicator, JurisdictionBadge, Skeleton } from "@/components/frontend/shared/UIComponents"
+import { PoweredByLabel } from "@/components/frontend/shared/PoweredByLabel"
 import { getAdvisorClients, generateScenarioAnalysis, MOCK_CLIENTS, type ScenarioAnalysisResult } from "@/lib/advisorApi"
 
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -737,7 +738,7 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
               </Card>
               
               {/* Run Button */}
-              <div className="flex justify-center">
+              <div className="flex flex-col items-center gap-2">
                 <button
                   onClick={runScenario}
                   disabled={!selectedScenario || selectedClients.size === 0 || isLoading}
@@ -755,6 +756,7 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
                     </>
                   )}
                 </button>
+                <PoweredByLabel product="Fabric IQ" variant="muted" />
               </div>
             </div>
           ) : (
@@ -866,6 +868,7 @@ export const AdvisorScenarioView: React.FC<AdvisorScenarioViewProps> = ({
                       <Sparkles className="w-4 h-4 text-white" />
                       <h3 className="text-sm font-semibold text-white">AI Scenario Analysis</h3>
                       <span className="text-xs bg-white/20 text-white px-2 py-0.5 rounded">Live AI</span>
+                      <PoweredByLabel product="Fabric IQ" variant="dark" />
                     </div>
                     <div className="p-4 space-y-3">
                       {aiAnalysis.headline && (

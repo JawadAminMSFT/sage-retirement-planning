@@ -26,6 +26,7 @@ from storage import (
     Conversation,
     ConversationMessage,
     SavedScenario,
+    ScenarioShareRecord,
 )
 
 # Azure AI Agents imports
@@ -113,18 +114,19 @@ def load_investment_products():
 
 # Pydantic Models
 class UserProfile(BaseModel):
-  id: str
-  name: str
-  age: int = Field(gt=0)
-  current_cash: float = Field(ge=0)
-  investment_assets: float = Field(ge=0)
-  yearly_savings_rate: float = Field(ge=0, le=1)
-  salary: float = Field(ge=0)
-  portfolio: Dict[str, float]
-  risk_appetite: str  # Allow any string value for risk appetite
-  target_retire_age: int = Field(gt=0)
-  target_monthly_income: float = Field(gt=0)
-  description: Optional[str] = None
+    id: str
+    name: str
+    age: int = Field(gt=0)
+    current_cash: float = Field(ge=0)
+    investment_assets: float = Field(ge=0)
+    yearly_savings_rate: float = Field(ge=0, le=1)
+    salary: float = Field(ge=0)
+    portfolio: Dict[str, float]
+    risk_appetite: str  # Allow any string value for risk appetite
+    target_retire_age: int = Field(gt=0)
+    target_monthly_income: float = Field(gt=0)
+    description: Optional[str] = None
+    advisor_id: Optional[str] = None
 
 class ProductRec(BaseModel):
   name: str
@@ -814,6 +816,7 @@ async def get_profiles():
 
 # Import advisor storage for data enrichment
 from advisor_storage import advisor_storage as _advisor_store
+from models import EscalationTicket, EscalationReason, EscalationPriority
 
 ADVISOR_SYSTEM_PROMPT = """You are Sage, an AI assistant for financial advisors. You help advisors manage their practice, 
 understand their clients' situations, and provide data-driven insights for retirement planning.
@@ -2264,6 +2267,131 @@ class SaveScenarioRequest(BaseModel):
     description: str
     timeframe_months: int
     projection_result: Dict[str, Any]
+
+
+class ScenarioConsentRequest(BaseModel):
+    """Request to record user consent for advisor scenario review."""
+    advisor_id: Optional[str] = None
+    scenario_description: str
+    analysis_payload: Dict[str, Any] = Field(default_factory=dict)
+    consent_status: str  # "accepted" | "rejected"
+
+
+def _resolve_advisor_id_for_user(user_id: str, fallback_advisor_id: Optional[str] = None) -> Optional[str]:
+    """Resolve advisor_id from user profile JSON with optional fallback."""
+    if fallback_advisor_id:
+        return fallback_advisor_id
+    try:
+        with open(DATA_DIR / "user_profiles.json", "r", encoding="utf-8") as f:
+            profiles = json.load(f)
+        for profile in profiles:
+            if profile.get("id") == user_id:
+                return profile.get("advisor_id")
+    except Exception:
+        pass
+    return None
+
+
+def _map_share_to_advisor_scenario(record: ScenarioShareRecord) -> Dict[str, Any]:
+    """Map a share record into advisor UI scenario card shape."""
+    analysis = record.analysis_payload or {}
+    predictions = analysis.get("predictions") or {}
+    metrics = predictions.get("metrics") or {}
+    deltas = predictions.get("deltas") or {}
+    cashflows = predictions.get("cashflows") or []
+
+    success_rate_pct = metrics.get("success_rate_pct")
+    current_success_pct = None
+    if success_rate_pct is not None and deltas.get("success_rate_delta_pct") is not None:
+        current_success_pct = success_rate_pct - deltas.get("success_rate_delta_pct")
+
+    final_balance = None
+    if isinstance(cashflows, list) and len(cashflows) > 0:
+        final_balance = cashflows[-1].get("end_assets")
+
+    impact = "neutral"
+    success_delta = deltas.get("success_rate_delta_pct")
+    if isinstance(success_delta, (int, float)):
+        if success_delta > 0:
+            impact = "positive"
+        elif success_delta < 0:
+            impact = "negative"
+
+    recommendation = analysis.get("considerations") or "Client requested advisor review for this scenario analysis."
+
+    return {
+        "id": record.id,
+        "name": "Client-shared scenario review",
+        "description": record.scenario_description,
+        "created_at": record.created_at,
+        "run_by": "client",
+        "impact": impact,
+        "recommendation": recommendation,
+        "projection_result": {
+            "success_probability": (success_rate_pct / 100.0) if isinstance(success_rate_pct, (int, float)) else 0,
+            "final_balance": final_balance if isinstance(final_balance, (int, float)) else 0,
+            "monthly_income": metrics.get("monthly_income"),
+            "current_success_probability": (current_success_pct / 100.0)
+            if isinstance(current_success_pct, (int, float))
+            else None,
+        },
+        "escalation_id": record.escalation_id,
+    }
+
+
+@app.post("/api/scenario-consent/{user_id}")
+async def submit_scenario_consent(user_id: str, request: ScenarioConsentRequest):
+    """Persist consent decision and create an advisor escalation on acceptance."""
+    consent_status = (request.consent_status or "").strip().lower()
+    if consent_status not in {"accepted", "rejected"}:
+        raise HTTPException(status_code=400, detail="consent_status must be 'accepted' or 'rejected'")
+
+    advisor_id = _resolve_advisor_id_for_user(user_id, request.advisor_id)
+    if not advisor_id:
+        raise HTTPException(status_code=400, detail="No advisor assigned to user")
+
+    escalation_id = None
+    if consent_status == "accepted":
+        escalation = EscalationTicket(
+            client_id=user_id,
+            advisor_id=advisor_id,
+            reason=EscalationReason.USER_REQUESTED,
+            context_summary=(
+                "Client consented to share a complex scenario analysis and requested advisor review "
+                "for follow-up discussion."
+            ),
+            client_question=request.scenario_description,
+            priority=EscalationPriority.MEDIUM,
+        )
+        escalation_id = await _advisor_store.save_escalation(escalation)
+
+    record = ScenarioShareRecord(
+        user_id=user_id,
+        advisor_id=advisor_id,
+        scenario_description=request.scenario_description,
+        analysis_payload=request.analysis_payload or {},
+        consent_status=consent_status,
+        escalation_id=escalation_id,
+    )
+    record_id = await storage.save_scenario_share(record)
+
+    return {
+        "id": record_id,
+        "consent_status": consent_status,
+        "advisor_id": advisor_id,
+        "escalation_id": escalation_id,
+    }
+
+
+@app.get("/api/shared-scenarios/{advisor_id}/{client_id}")
+async def get_shared_scenarios_for_advisor(advisor_id: str, client_id: str):
+    """Return client scenarios shared with advisor by explicit user consent."""
+    records = await storage.list_scenario_shares(
+        user_id=client_id,
+        advisor_id=advisor_id,
+        consent_status="accepted",
+    )
+    return {"scenarios": [_map_share_to_advisor_scenario(r) for r in records]}
 
 
 @app.get("/api/saved-scenarios/{user_id}")

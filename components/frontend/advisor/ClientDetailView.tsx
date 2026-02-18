@@ -37,7 +37,7 @@ import {
   EmptyState,
   Skeleton
 } from "@/components/frontend/shared/UIComponents"
-import { generateClientSummary } from "@/lib/advisorApi"
+import { generateClientSummary, getClientSharedScenarios } from "@/lib/advisorApi"
 
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -222,15 +222,73 @@ function formatDate(dateStr: string): string {
 
 function formatRelativeTime(dateStr: string): string {
   const date = new Date(dateStr)
+  if (Number.isNaN(date.getTime())) return ""
+
   const now = new Date()
   const diff = now.getTime() - date.getTime()
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  const days = Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)))
   
   if (days === 0) return "Today"
   if (days === 1) return "Yesterday"
   if (days < 7) return `${days} days ago`
   if (days < 30) return `${Math.floor(days / 7)} weeks ago`
   return formatDate(dateStr)
+}
+
+function renderInlineMarkdown(text: string): React.ReactNode[] {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g)
+  return parts.map((part, idx) => {
+    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+      return <strong key={`bold-${idx}`}>{part.slice(2, -2)}</strong>
+    }
+    return <React.Fragment key={`text-${idx}`}>{part}</React.Fragment>
+  })
+}
+
+function renderSummaryMarkdown(summary: string): React.ReactNode {
+  const lines = summary.split("\n")
+
+  return lines.map((rawLine, idx) => {
+    const line = rawLine.trimEnd()
+    if (!line.trim()) {
+      return <div key={`spacer-${idx}`} className="h-2" />
+    }
+
+    const headingMatch = line.match(/^#{1,3}\s+(.+)$/)
+    if (headingMatch) {
+      return (
+        <h3 key={`heading-${idx}`} className="text-gray-900 font-semibold text-base">
+          {renderInlineMarkdown(headingMatch[1])}
+        </h3>
+      )
+    }
+
+    const boldListMatch = line.match(/^-\s+\*\*(.+?)\*\*:\s*(.+)$/)
+    if (boldListMatch) {
+      return (
+        <p key={`bold-list-${idx}`} className="text-sm text-gray-700">
+          <span className="mr-1">•</span>
+          <strong>{boldListMatch[1]}</strong>: {renderInlineMarkdown(boldListMatch[2])}
+        </p>
+      )
+    }
+
+    const listMatch = line.match(/^-\s+(.+)$/)
+    if (listMatch) {
+      return (
+        <p key={`list-${idx}`} className="text-sm text-gray-700">
+          <span className="mr-1">•</span>
+          {renderInlineMarkdown(listMatch[1])}
+        </p>
+      )
+    }
+
+    return (
+      <p key={`paragraph-${idx}`} className="text-sm text-gray-700 leading-relaxed">
+        {renderInlineMarkdown(line)}
+      </p>
+    )
+  })
 }
 
 function getCategoryColor(category: string): string {
@@ -315,7 +373,7 @@ const AISummaryCard: React.FC<AISummaryCardProps> = ({ client, isLoading, adviso
         <span className="text-sm font-medium text-emerald-900">AI Summary</span>
         {!isMockMode && <span className="text-xs bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded">Live AI</span>}
       </div>
-      <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{summary}</p>
+      <div className="space-y-1">{renderSummaryMarkdown(summary)}</div>
     </Card>
   )
 }
@@ -450,52 +508,37 @@ const ConversationsTab: React.FC<ConversationsTabProps> = ({ clientId, isMockMod
 // â”€â”€â”€ Scenarios Tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface ScenariosTabProps {
+  advisorId: string
   clientId: string
   isMockMode?: boolean
 }
 
-const ScenariosTab: React.FC<ScenariosTabProps> = ({ clientId, isMockMode }) => {
+const ScenariosTab: React.FC<ScenariosTabProps> = ({ advisorId, clientId, isMockMode }) => {
   const [scenarios, setScenarios] = useState<ClientScenario[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   
   useEffect(() => {
+    let isActive = true
     setIsLoading(true)
-    setTimeout(() => {
-      // Load advisor-run scenarios from localStorage
-      let advisorScenarios: ClientScenario[] = []
-      try {
-        const stored = JSON.parse(localStorage.getItem("advisor_scenarios") || "[]")
-        advisorScenarios = stored
-          .filter((s: any) => s.client_id === clientId)
-          .map((s: any) => ({
-            id: s.id,
-            name: s.name,
-            description: s.description,
-            created_at: s.created_at,
-            run_by: s.run_by || "advisor",
-            scenario_type: s.scenario_type,
-            impact: s.impact,
-            recommendation: s.recommendation,
-            projection_result: s.projection_result,
-          }))
-      } catch (e) {
-        console.error("Failed to load advisor scenarios:", e)
-      }
-      
-      // Combine with mock/existing client scenarios
-      const combined = [...advisorScenarios, ...MOCK_SCENARIOS]
-      // Deduplicate by id
-      const seen = new Set<string>()
-      const unique = combined.filter(s => {
-        if (seen.has(s.id)) return false
-        seen.add(s.id)
-        return true
+
+    getClientSharedScenarios(advisorId, clientId, !!isMockMode)
+      .then((data) => {
+        if (!isActive) return
+        setScenarios(data as ClientScenario[])
       })
-      setScenarios(unique)
-      setIsLoading(false)
-    }, 500)
-  }, [clientId, isMockMode])
+      .catch((e) => {
+        console.error("Failed to load consented shared scenarios:", e)
+        if (isActive) setScenarios([])
+      })
+      .finally(() => {
+        if (isActive) setIsLoading(false)
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [advisorId, clientId, isMockMode])
   
   if (isLoading) {
     return (
@@ -1053,7 +1096,7 @@ export const ClientDetailView: React.FC<ClientDetailViewProps> = ({
         
         {activeTab === "scenarios" && (
           <div className="max-w-4xl">
-            <ScenariosTab clientId={client.id} isMockMode={isMockMode} />
+            <ScenariosTab advisorId={advisorId} clientId={client.id} isMockMode={isMockMode} />
           </div>
         )}
         

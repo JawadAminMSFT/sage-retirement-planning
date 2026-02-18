@@ -44,6 +44,19 @@ class SavedScenario(BaseModel):
     created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
 
 
+class ScenarioShareRecord(BaseModel):
+    """A consent decision to share (or not share) scenario analysis with an advisor."""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    advisor_id: str
+    scenario_description: str
+    analysis_payload: Dict[str, Any] = Field(default_factory=dict)
+    consent_status: str  # "accepted" | "rejected"
+    escalation_id: Optional[str] = None
+    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    updated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+
+
 # ─── Storage Interface ───────────────────────────────────────────────────────
 
 class StorageBackend(ABC):
@@ -89,6 +102,22 @@ class StorageBackend(ABC):
         """Delete a scenario. Returns True if successful."""
         pass
 
+    @abstractmethod
+    async def save_scenario_share(self, record: ScenarioShareRecord) -> str:
+        """Save a scenario share consent record. Returns the record ID."""
+        pass
+
+    @abstractmethod
+    async def list_scenario_shares(
+        self,
+        *,
+        user_id: Optional[str] = None,
+        advisor_id: Optional[str] = None,
+        consent_status: Optional[str] = None,
+    ) -> List[ScenarioShareRecord]:
+        """List scenario share records with optional filters."""
+        pass
+
 
 # ─── Local JSON Storage ──────────────────────────────────────────────────────
 
@@ -114,6 +143,10 @@ class LocalStorage(StorageBackend):
     def _get_scenarios_file(self, user_id: str) -> Path:
         """Get path to user's scenarios file."""
         return self._get_user_dir(user_id) / "scenarios.json"
+
+    def _get_scenario_shares_file(self, user_id: str) -> Path:
+        """Get path to user's scenario consent/share records file."""
+        return self._get_user_dir(user_id) / "scenario_shares.json"
     
     def _load_json(self, file_path: Path) -> List[Dict]:
         """Load JSON array from file."""
@@ -231,6 +264,60 @@ class LocalStorage(StorageBackend):
             self._save_json(file_path, scenarios)
             return True
         return False
+
+    # ── Scenario Shares / Consent ──
+
+    async def save_scenario_share(self, record: ScenarioShareRecord) -> str:
+        file_path = self._get_scenario_shares_file(record.user_id)
+        records = self._load_json(file_path)
+
+        record.updated_at = datetime.utcnow().isoformat()
+        record_dict = record.model_dump()
+
+        existing_idx = next(
+            (i for i, r in enumerate(records) if r.get("id") == record.id),
+            None
+        )
+
+        if existing_idx is not None:
+            records[existing_idx] = record_dict
+        else:
+            records.append(record_dict)
+
+        self._save_json(file_path, records)
+        return record.id
+
+    async def list_scenario_shares(
+        self,
+        *,
+        user_id: Optional[str] = None,
+        advisor_id: Optional[str] = None,
+        consent_status: Optional[str] = None,
+    ) -> List[ScenarioShareRecord]:
+        user_ids: List[str] = []
+        if user_id:
+            user_ids = [user_id]
+        else:
+            user_ids = [d.name for d in self.data_dir.iterdir() if d.is_dir()]
+
+        results: List[ScenarioShareRecord] = []
+        for uid in user_ids:
+            file_path = self._get_scenario_shares_file(uid)
+            records = self._load_json(file_path)
+            for rec in records:
+                try:
+                    parsed = ScenarioShareRecord(**rec)
+                except Exception:
+                    continue
+
+                if advisor_id and parsed.advisor_id != advisor_id:
+                    continue
+                if consent_status and parsed.consent_status != consent_status:
+                    continue
+                results.append(parsed)
+
+        results.sort(key=lambda r: r.created_at, reverse=True)
+        return results
 
 
 # ─── Azure Blob Storage ──────────────────────────────────────────────────────
@@ -373,6 +460,54 @@ class AzureBlobStorage(StorageBackend):
             await self._save_blob(user_id, "scenarios", scenarios)
             return True
         return False
+
+    # ── Scenario Shares / Consent ──
+
+    async def save_scenario_share(self, record: ScenarioShareRecord) -> str:
+        records = await self._load_blob(record.user_id, "scenario_shares")
+
+        record.updated_at = datetime.utcnow().isoformat()
+        record_dict = record.model_dump()
+
+        existing_idx = next(
+            (i for i, r in enumerate(records) if r.get("id") == record.id),
+            None
+        )
+
+        if existing_idx is not None:
+            records[existing_idx] = record_dict
+        else:
+            records.append(record_dict)
+
+        await self._save_blob(record.user_id, "scenario_shares", records)
+        return record.id
+
+    async def list_scenario_shares(
+        self,
+        *,
+        user_id: Optional[str] = None,
+        advisor_id: Optional[str] = None,
+        consent_status: Optional[str] = None,
+    ) -> List[ScenarioShareRecord]:
+        if not user_id:
+            return []
+
+        records = await self._load_blob(user_id, "scenario_shares")
+        results: List[ScenarioShareRecord] = []
+        for rec in records:
+            try:
+                parsed = ScenarioShareRecord(**rec)
+            except Exception:
+                continue
+
+            if advisor_id and parsed.advisor_id != advisor_id:
+                continue
+            if consent_status and parsed.consent_status != consent_status:
+                continue
+            results.append(parsed)
+
+        results.sort(key=lambda r: r.created_at, reverse=True)
+        return results
 
 
 # ─── Storage Factory ─────────────────────────────────────────────────────────

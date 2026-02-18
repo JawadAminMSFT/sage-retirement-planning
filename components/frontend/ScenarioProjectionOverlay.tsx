@@ -16,6 +16,7 @@ import {
   ChevronRight,
 } from "lucide-react"
 import type { ScenarioProjectionResponse, ScenarioRisk, ScenarioOpportunity } from "@/lib/api"
+import { PoweredByLabel } from "@/components/frontend/shared/PoweredByLabel"
 import {
   listSavedScenarios,
   getSavedScenario,
@@ -211,7 +212,10 @@ export const ScenarioProjectionOverlay: React.FC<ScenarioProjectionOverlayProps>
             <Sparkles className="w-4 h-4" />
           </div>
           <div>
-            <p className="font-semibold text-sm">Projection Mode</p>
+            <div className="flex items-center gap-2">
+              <p className="font-semibold text-sm">Projection Mode</p>
+              <PoweredByLabel product="Fabric IQ" variant="dark" />
+            </div>
             <p className="text-xs text-indigo-200">
               {projection
                 ? `Showing ${selectedTimeframe === 12 ? "1 year" : `${selectedTimeframe} month`} projection`

@@ -18,6 +18,37 @@ import type {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8172'
 
+const MOCK_SHARED_SCENARIOS_KEY = "mock_shared_scenarios"
+const MOCK_ESCALATIONS_KEY = "mock_escalations"
+
+function readMockArray(key: string): any[] {
+  if (typeof window === "undefined") return []
+  try {
+    const raw = localStorage.getItem(key)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+export interface AdvisorSharedScenario {
+  id: string
+  name: string
+  description: string
+  created_at: string
+  run_by: "client"
+  impact: "positive" | "negative" | "neutral"
+  recommendation?: string
+  projection_result: {
+    success_probability: number
+    final_balance: number
+    monthly_income?: number
+    current_success_probability?: number
+  }
+  escalation_id?: string
+}
+
 // ─── Advisor Profile ────────────────────────────────────────────────────────
 
 export async function getAdvisor(advisorId: string): Promise<AdvisorProfile> {
@@ -86,6 +117,89 @@ export async function getAdvisorClient(advisorId: string, clientId: string): Pro
     throw new Error(`Failed to fetch client: ${response.statusText}`)
   }
   return response.json()
+}
+
+export async function getClientSharedScenarios(
+  advisorId: string,
+  clientId: string,
+  isMockMode: boolean = false,
+): Promise<AdvisorSharedScenario[]> {
+  if (isMockMode) {
+    const shares = readMockArray(MOCK_SHARED_SCENARIOS_KEY)
+      .filter((s: any) =>
+        s.user_id === clientId &&
+        s.advisor_id === advisorId &&
+        s.consent_status === "accepted",
+      )
+      .sort((a: any, b: any) => (a.created_at < b.created_at ? 1 : -1))
+
+    return shares.map((record: any) => {
+      const analysis = record.analysis_payload || {}
+      const predictions = analysis.predictions || {}
+      const metrics = predictions.metrics || {}
+      const deltas = predictions.deltas || {}
+      const cashflows = predictions.cashflows || []
+      const finalBalance = cashflows.length > 0 ? cashflows[cashflows.length - 1]?.end_assets || 0 : 0
+      const scenarioSuccess = typeof metrics.success_rate_pct === "number" ? metrics.success_rate_pct : 0
+      const baselineSuccess =
+        typeof deltas.success_rate_delta_pct === "number"
+          ? scenarioSuccess - deltas.success_rate_delta_pct
+          : undefined
+      const impact =
+        typeof deltas.success_rate_delta_pct === "number"
+          ? deltas.success_rate_delta_pct > 0
+            ? "positive"
+            : deltas.success_rate_delta_pct < 0
+              ? "negative"
+              : "neutral"
+          : "neutral"
+
+      return {
+        id: record.id,
+        name: "Client-shared scenario review",
+        description: record.scenario_description,
+        created_at: record.created_at,
+        run_by: "client" as const,
+        impact,
+        recommendation: analysis.considerations || "Client requested advisor review for this scenario analysis.",
+        projection_result: {
+          success_probability: scenarioSuccess / 100,
+          final_balance: finalBalance,
+          monthly_income: metrics.monthly_income,
+          current_success_probability:
+            typeof baselineSuccess === "number" ? baselineSuccess / 100 : undefined,
+        },
+        escalation_id: record.escalation_id,
+      }
+    })
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/shared-scenarios/${advisorId}/${clientId}`)
+  if (!response.ok) {
+    throw new Error(`Failed to fetch shared scenarios: ${response.statusText}`)
+  }
+  const data = await response.json()
+  return data.scenarios || []
+}
+
+export function getMockScenarioShareEscalations(advisorId: string): EscalationTicket[] {
+  const records = readMockArray(MOCK_ESCALATIONS_KEY)
+    .filter((e: any) => e.advisor_id === advisorId)
+    .map((e: any) => ({
+      id: e.id,
+      client_id: e.client_id,
+      advisor_id: e.advisor_id,
+      reason: e.reason || "user_requested",
+      context_summary: e.context_summary,
+      client_question: e.client_question,
+      status: e.status || "pending",
+      priority: e.priority || "medium",
+      created_at: e.created_at,
+      acknowledged_at: e.acknowledged_at,
+      resolved_at: e.resolved_at,
+    }))
+
+  return records.sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
 }
 
 // ─── Advisor Notes ──────────────────────────────────────────────────────────
