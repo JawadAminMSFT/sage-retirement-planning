@@ -555,7 +555,7 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
   
-  useEffect(() => { scrollToBottom() }, [messages])
+  useEffect(() => { scrollToBottom() }, [messages, voiceSession.interimTranscript])
 
   // ── Conversation history ──
 
@@ -926,6 +926,44 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
                 </div>
               </div>
             )}
+
+            {/* Live voice transcript bubble */}
+            {voiceSession.interimTranscript && (
+              voiceSession.interimRole === "user" ? (
+                <div className="flex justify-end mb-4 animate-in fade-in duration-200">
+                  <div className="max-w-[80%] bg-emerald-600 text-white rounded-2xl rounded-br-sm px-4 py-3">
+                    <p className="text-sm whitespace-pre-wrap">
+                      {voiceSession.interimTranscript}
+                      <span className="inline-block w-1.5 h-3.5 ml-1 bg-white/60 animate-pulse rounded-sm align-text-bottom" />
+                    </p>
+                    <div className="flex items-center gap-1.5 mt-1.5 justify-end">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white/60 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/80"></span>
+                      </span>
+                      <span className="text-[10px] text-white/70">Speaking...</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-start mb-4 animate-in fade-in duration-200">
+                  <div className="max-w-[80%] bg-white border rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
+                    <p className="text-sm whitespace-pre-wrap text-gray-900">
+                      {voiceSession.interimTranscript}
+                      <span className="inline-block w-1.5 h-3.5 ml-1 bg-gray-400/60 animate-pulse rounded-sm align-text-bottom" />
+                    </p>
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-500"></span>
+                      </span>
+                      <span className="text-[10px] text-gray-400">Speaking...</span>
+                    </div>
+                  </div>
+                </div>
+              )
+            )}
+
             <div ref={messagesEndRef} />
           </div>
         )}

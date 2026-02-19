@@ -126,7 +126,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
   useEffect(() => setIsClient(true), [])
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages, currentStatus])
+  }, [messages, currentStatus, voiceSession.interimTranscript])
 
   useEffect(() => {
     const el = textareaRef.current
@@ -769,6 +769,58 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
           ))}
 
           {currentStatus && <StatusBubble status={currentStatus} />}
+
+          {/* Live voice transcript bubble */}
+          {voiceSession.interimTranscript && (
+            <div
+              className={`flex gap-4 animate-in fade-in duration-200 ${
+                voiceSession.interimRole === "user" ? "flex-row-reverse" : ""
+              }`}
+            >
+              {/* Avatar */}
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm ${
+                  voiceSession.interimRole === "user"
+                    ? "bg-gray-700"
+                    : "bg-gradient-to-br from-green-500 to-emerald-600"
+                }`}
+              >
+                {voiceSession.interimRole === "user" ? (
+                  <span className="text-white text-sm font-bold">U</span>
+                ) : (
+                  <Bot className="w-5 h-5 text-white" />
+                )}
+              </div>
+
+              {/* Content */}
+              <div
+                className={`flex-1 max-w-5xl ${
+                  voiceSession.interimRole === "user" ? "text-right" : ""
+                }`}
+              >
+                <div
+                  className={`inline-block p-4 rounded-2xl ${
+                    voiceSession.interimRole === "user"
+                      ? "bg-gradient-to-br from-green-600 to-emerald-700 text-white shadow-sm"
+                      : "bg-gray-50/80 text-gray-900 border border-gray-200/60"
+                  }`}
+                >
+                  <span>{voiceSession.interimTranscript}</span>
+                  <span className="inline-block w-1.5 h-4 ml-1 bg-current opacity-60 animate-pulse rounded-sm align-text-bottom" />
+                </div>
+                <div className={`text-xs text-gray-400 mt-2 flex items-center gap-1.5 ${
+                  voiceSession.interimRole === "user" ? "justify-end" : ""
+                }`}>
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  Speaking...
+                </div>
+              </div>
+            </div>
+          )}
+
           <div ref={messagesEndRef} />
         </div>
       </div>

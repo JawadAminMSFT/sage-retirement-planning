@@ -79,6 +79,14 @@ class AzureRealtimeClient:
         # Track whether the model is currently responding
         self._is_responding = False
 
+        # True from RESPONSE_CREATED until well after RESPONSE_DONE
+        # (accounts for client-side audio queue that plays after generation).
+        # Used to decide whether SPEECH_STARTED is a barge-in.
+        self._has_pending_audio = False
+
+        # Track the last assistant response item_id for truncation on barge-in
+        self._last_response_item_id: Optional[str] = None
+
     def _default_system_message(self) -> str:
         return (
             "You are Sage, an AI retirement planning assistant. You provide helpful, "
@@ -180,21 +188,29 @@ class AzureRealtimeClient:
                     self.on_status_change("listening")
 
             elif event.type == ServerEventType.INPUT_AUDIO_BUFFER_SPEECH_STARTED:
-                # VAD detected user started speaking — cancel any in-progress AI response
-                if self._is_responding:
-                    try:
-                        await self._conn.response.cancel()
-                        print("Interrupted AI response (user started speaking)")
-                    except Exception as e:
-                        print(f"Interrupt during speech: {e}")
+                # Server VAD detected speech on the input channel.
+                # If audio might still be playing on the client (either
+                # during generation or queued after generation_done),
+                # treat this as a barge-in so the frontend clears its queue.
+                if self._is_responding or self._has_pending_audio:
                     self._is_responding = False
-                if self.on_status_change:
-                    self.on_status_change("listening")
+                    self._has_pending_audio = False
+                    print("VAD barge-in: clearing client audio")
+                    if self.on_status_change:
+                        self.on_status_change("interrupted")
+                else:
+                    if self.on_status_change:
+                        self.on_status_change("listening")
 
             elif event.type == ServerEventType.INPUT_AUDIO_BUFFER_SPEECH_STOPPED:
-                # VAD detected user stopped speaking — server will process, show "thinking"
-                if self.on_status_change:
-                    self.on_status_change("thinking")
+                # VAD detected speech stopped on input channel.
+                # Ignore this while the AI is responding — it's echo from
+                # the AI's own audio bleeding through the mic.
+                if self._is_responding:
+                    print("Ignoring speech_stopped while AI is responding (echo)")
+                else:
+                    if self.on_status_change:
+                        self.on_status_change("thinking")
 
             elif event.type == ServerEventType.CONVERSATION_ITEM_INPUT_AUDIO_TRANSCRIPTION_DELTA:
                 # Streaming user speech transcript
@@ -210,15 +226,27 @@ class AzureRealtimeClient:
                     self.on_transcript(transcript, True, "user")
                 self._user_transcript_buffer = ""
 
+            elif event.type == ServerEventType.RESPONSE_OUTPUT_ITEM_ADDED:
+                # Track the item_id of the assistant's audio response
+                # (needed for conversation.item.truncate on barge-in)
+                item = getattr(event, "item", None)
+                if item:
+                    item_id = getattr(item, "id", None)
+                    if item_id:
+                        self._last_response_item_id = item_id
+                        print(f"Tracking response item: {item_id}")
+
             elif event.type == ServerEventType.RESPONSE_CREATED:
                 # AI response generation started
                 self._is_responding = True
+                self._has_pending_audio = True
                 if self.on_status_change:
                     self.on_status_change("speaking")
 
             elif event.type == ServerEventType.RESPONSE_AUDIO_DELTA:
                 # Audio chunk from AI response
                 if self.on_audio_chunk and event.delta:
+                    print(f"Audio delta: {len(event.delta)} bytes")
                     self.on_audio_chunk(event.delta)
 
             elif event.type == ServerEventType.RESPONSE_AUDIO_TRANSCRIPT_DELTA:
@@ -237,14 +265,17 @@ class AzureRealtimeClient:
                 self._assistant_transcript_buffer = ""
 
             elif event.type == ServerEventType.RESPONSE_AUDIO_DONE:
-                # Audio playback complete for this response
+                print("RESPONSE_AUDIO_DONE received")
                 pass
 
             elif event.type == ServerEventType.RESPONSE_DONE:
-                # Full response complete - return to listening
+                print("RESPONSE_DONE received")
                 self._is_responding = False
+                # Keep _has_pending_audio = True — the client still has
+                # queued audio to play.  It will be cleared on next
+                # SPEECH_STARTED (barge-in) or after the client drains.
                 if self.on_status_change:
-                    self.on_status_change("listening")
+                    self.on_status_change("generation_done")
 
             elif event.type == ServerEventType.ERROR:
                 error_msg = "Unknown error"
@@ -328,6 +359,8 @@ class AzureRealtimeClient:
         self._conn_ctx = None
         self.is_connected = False
         self._is_responding = False
+        self._has_pending_audio = False
+        self._last_response_item_id = None
         self._user_transcript_buffer = ""
         self._assistant_transcript_buffer = ""
 

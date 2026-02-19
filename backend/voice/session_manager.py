@@ -53,6 +53,12 @@ class VoiceSessionManager:
         self.user_profile = user_profile or {}
         self.send_message = send_message
 
+        # Ordered message queue — guarantees WebSocket messages reach the
+        # frontend in the same order events arrived from Azure (prevents
+        # generation_done racing ahead of the last audio chunk).
+        self._send_queue: asyncio.Queue = asyncio.Queue()
+        self._sender_task: Optional[asyncio.Task] = None
+
         # Azure Realtime Client
         system_message = self._build_system_message()
         self.realtime_client = AzureRealtimeClient(
@@ -117,6 +123,9 @@ class VoiceSessionManager:
             True if started successfully, False otherwise
         """
         try:
+            # Start the ordered message sender
+            self._sender_task = asyncio.create_task(self._ordered_sender())
+
             # Connect to Azure Realtime API
             success = await self.realtime_client.connect()
             if not success:
@@ -217,9 +226,16 @@ class VoiceSessionManager:
             # Disconnect from Azure
             await self.realtime_client.disconnect()
 
+            # Stop the ordered sender task
+            if self._sender_task and not self._sender_task.done():
+                self._send_queue.put_nowait(None)  # sentinel to stop
+                try:
+                    await asyncio.wait_for(self._sender_task, timeout=2.0)
+                except asyncio.TimeoutError:
+                    self._sender_task.cancel()
+
             # Update status
             self.status = VoiceSessionStatus.IDLE
-            self._send_status_update()
 
         except Exception as e:
             print(f"Error closing session: {e}")
@@ -234,48 +250,43 @@ class VoiceSessionManager:
     def _on_audio_chunk(self, audio_bytes: bytes) -> None:
         """Callback when audio chunk received from Azure"""
         if self.send_message:
-            # Convert to base64 for transport
             audio_b64 = self.audio_processor.pcm16_to_base64(audio_bytes)
-            # Schedule the async send_message without blocking
-            asyncio.create_task(self.send_message({
-                "type": "audio_chunk",
-                "data": {"audio": audio_b64}
-            }))
+            self._enqueue({"type": "audio_chunk", "data": {"audio": audio_b64}})
 
     def _on_transcript(self, text: str, is_final: bool, role: str = "assistant") -> None:
         """Callback when transcript received from Azure Voice Live"""
-        # Update appropriate transcript buffer based on role from SDK
         if role == "user":
             self.user_transcript = text
         else:
             self.assistant_transcript = text
 
-        # Send to frontend
         if self.send_message:
-            # Schedule the async send_message without blocking
-            asyncio.create_task(self.send_message({
+            self._enqueue({
                 "type": "transcript",
-                "data": {
-                    "text": text,
-                    "isFinal": is_final,
-                    "role": role
-                }
-            }))
+                "data": {"text": text, "isFinal": is_final, "role": role}
+            })
 
     def _on_status_change(self, new_status: str) -> None:
         """Callback when status changes"""
-        # Map Azure status to our status
+        # Map Azure status to our internal status
         status_map = {
             "connected": VoiceSessionStatus.LISTENING,
             "listening": VoiceSessionStatus.LISTENING,
             "thinking": VoiceSessionStatus.THINKING,
             "speaking": VoiceSessionStatus.SPEAKING,
             "interrupted": VoiceSessionStatus.LISTENING,
+            "generation_done": VoiceSessionStatus.SPEAKING,  # keep as speaking until frontend drains
             "disconnected": VoiceSessionStatus.IDLE,
         }
 
         self.status = status_map.get(new_status, VoiceSessionStatus.IDLE)
-        self._send_status_update()
+
+        # These statuses are forwarded raw to the frontend so it can
+        # handle them with client-side audio queue awareness.
+        if new_status in ("interrupted", "generation_done"):
+            self._send_raw_status(new_status)
+        else:
+            self._send_status_update()
 
     def _on_error(self, error_msg: str) -> None:
         """Callback when error occurs"""
@@ -285,20 +296,38 @@ class VoiceSessionManager:
     def _send_status_update(self) -> None:
         """Send status update to frontend"""
         if self.send_message:
-            # Schedule the async send_message without blocking
-            asyncio.create_task(self.send_message({
-                "type": "status",
-                "data": {"status": self.status.value}
-            }))
+            self._enqueue({"type": "status", "data": {"status": self.status.value}})
+
+    def _send_raw_status(self, raw_status: str) -> None:
+        """Send a raw status string to the frontend (e.g. 'interrupted')"""
+        if self.send_message:
+            self._enqueue({"type": "status", "data": {"status": raw_status}})
 
     def _send_error(self, error_msg: str) -> None:
         """Send error message to frontend"""
         if self.send_message:
-            # Schedule the async send_message without blocking
-            asyncio.create_task(self.send_message({
-                "type": "error",
-                "data": {"message": error_msg}
-            }))
+            self._enqueue({"type": "error", "data": {"message": error_msg}})
+
+    def _enqueue(self, msg: dict) -> None:
+        """Enqueue a message for ordered delivery to the frontend"""
+        try:
+            self._send_queue.put_nowait(msg)
+        except Exception as e:
+            print(f"Error enqueueing message: {e}")
+
+    async def _ordered_sender(self) -> None:
+        """Background task: sends messages to frontend sequentially in FIFO order"""
+        try:
+            while True:
+                msg = await self._send_queue.get()
+                if msg is None:  # shutdown sentinel
+                    break
+                try:
+                    await self.send_message(msg)
+                except Exception as e:
+                    print(f"Error sending message to frontend: {e}")
+        except asyncio.CancelledError:
+            pass
 
     async def _save_turn_to_history(self, duration_ms: int) -> None:
         """

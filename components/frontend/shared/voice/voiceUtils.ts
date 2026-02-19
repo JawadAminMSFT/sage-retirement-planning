@@ -69,14 +69,27 @@ export function calculateAudioLevel(float32Array: Float32Array): number {
 }
 
 /**
- * Audio buffer queue for seamless playback
- * Uses proactive scheduling to eliminate gaps between chunks
+ * Audio buffer queue for seamless playback.
+ *
+ * Drain detection uses AudioContext.currentTime vs nextStartTime (the
+ * scheduled end time of the last chunk) instead of counting source nodes.
+ * This eliminates false-drain edge cases between short chunks.
  */
 export class AudioBufferQueue {
   private audioContext: AudioContext
   private nextStartTime: number = 0
   private sampleRate: number
-  private scheduledSources: AudioBufferSourceNode[] = []
+  private activeSources: AudioBufferSourceNode[] = []
+  private drainPollTimer: ReturnType<typeof setInterval> | null = null
+
+  /** Playback speed — 1.0 matches the server's generation rate */
+  playbackRate: number = 1.0
+
+  /** Called once when generation is complete AND all audio has finished playing */
+  onDrained: (() => void) | null = null
+
+  /** Set to true when the server signals generation_done */
+  generationComplete: boolean = false
 
   constructor(sampleRate: number = 24000) {
     if (typeof window === 'undefined') {
@@ -103,25 +116,74 @@ export class AudioBufferQueue {
       float32Data.length,
       this.sampleRate
     )
-
     audioBuffer.getChannelData(0).set(float32Data)
 
     const source = this.audioContext.createBufferSource()
     source.buffer = audioBuffer
+    source.playbackRate.value = this.playbackRate
     source.connect(this.audioContext.destination)
 
-    // Schedule at the next available time (proactive, no gaps)
     const currentTime = this.audioContext.currentTime
     const startTime = Math.max(currentTime, this.nextStartTime)
-
     source.start(startTime)
-    this.nextStartTime = startTime + audioBuffer.duration
+    this.nextStartTime = startTime + audioBuffer.duration / this.playbackRate
 
-    // Track for cleanup
-    this.scheduledSources.push(source)
+    // Track source for stop/clear only
+    this.activeSources.push(source)
     source.onended = () => {
-      const idx = this.scheduledSources.indexOf(source)
-      if (idx !== -1) this.scheduledSources.splice(idx, 1)
+      const idx = this.activeSources.indexOf(source)
+      if (idx !== -1) this.activeSources.splice(idx, 1)
+    }
+
+    // If generation is already complete, start polling for drain
+    if (this.generationComplete && !this.drainPollTimer) {
+      this.startDrainPoll()
+    }
+  }
+
+  /**
+   * Whether audio is still scheduled to play.
+   * Uses time-based check (not source count) to avoid false negatives
+   * between short chunks.
+   */
+  get isPlaying(): boolean {
+    return this.audioContext.currentTime < this.nextStartTime
+  }
+
+  /**
+   * Seconds of audio buffered ahead of the current playback position.
+   */
+  get bufferedAhead(): number {
+    return Math.max(0, this.nextStartTime - this.audioContext.currentTime)
+  }
+
+  /**
+   * Mark generation as complete and begin polling for playback end.
+   */
+  markGenerationComplete(): void {
+    this.generationComplete = true
+    console.log('[AudioQueue] generation complete, buffered ahead:', this.bufferedAhead.toFixed(2), 's')
+    if (!this.drainPollTimer) {
+      this.startDrainPoll()
+    }
+  }
+
+  private startDrainPoll(): void {
+    this.drainPollTimer = setInterval(() => {
+      if (!this.isPlaying) {
+        this.stopDrainPoll()
+        console.log('[AudioQueue] drained — notifying')
+        if (this.onDrained) {
+          this.onDrained()
+        }
+      }
+    }, 100)
+  }
+
+  private stopDrainPoll(): void {
+    if (this.drainPollTimer) {
+      clearInterval(this.drainPollTimer)
+      this.drainPollTimer = null
     }
   }
 
@@ -129,7 +191,8 @@ export class AudioBufferQueue {
    * Clear all queued/playing buffers and stop playback
    */
   clear(): void {
-    for (const source of this.scheduledSources) {
+    this.stopDrainPoll()
+    for (const source of this.activeSources) {
       try {
         source.stop()
         source.disconnect()
@@ -137,8 +200,9 @@ export class AudioBufferQueue {
         // Already stopped
       }
     }
-    this.scheduledSources = []
+    this.activeSources = []
     this.nextStartTime = 0
+    this.generationComplete = false
   }
 
   /**

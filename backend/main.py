@@ -86,11 +86,11 @@ ENABLE_EVALUATIONS = True  # Enable for agent evaluation feature
 DATA_DIR = Path(__file__).parent / "data"
 
 # Initialize Azure AI client
-credential = DefaultAzureCredential()
+credential = DefaultAzureCredential() if project_endpoint else None
 agents_client = AgentsClient(
   endpoint=project_endpoint,
   credential=credential,
-)
+) if project_endpoint else None
 
 # Load data from JSON files
 def load_user_profiles():
@@ -571,11 +571,15 @@ class StreamingRetirementEventHandler(AgentEventHandler):
 
 # Initialize components
 user_functions = {get_product_catalogue}
-thread_manager = ThreadManager(agents_client)
+thread_manager = ThreadManager(agents_client) if agents_client else None
 
 # Agent setup
 def setup_agent():
   """Initialize or find the retirement planning agent"""
+  if agents_client is None:
+      print("PROJECT_ENDPOINT not configured - skipping agent initialization")
+      return None, None
+
   functions = FunctionTool(user_functions)
   tools = functions.definitions
 
@@ -617,8 +621,11 @@ def setup_agent():
 try:
     agent, functions = setup_agent()
     if agent is None:
-        print("[WARNING] Agent initialization failed. Chat endpoints will not work.")
-        print("[OK] Voice endpoints are still available at /ws/voice/session")
+        if not project_endpoint:
+            print("[INFO] Running in limited mode - PROJECT_ENDPOINT not set")
+        else:
+            print("[WARNING] Agent initialization failed. Chat endpoints will not work.")
+        print("[OK] Voice and data endpoints are available")
 except Exception as e:
     print(f"[ERROR] FATAL ERROR during agent setup: {e}")
     print("Backend starting in emergency mode - only voice endpoints available")

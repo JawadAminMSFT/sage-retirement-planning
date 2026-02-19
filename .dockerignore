@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.azure
+*.md
+tests
+docs
+infra
+backend
+nul
+*.log
+.env*
+!.env.example

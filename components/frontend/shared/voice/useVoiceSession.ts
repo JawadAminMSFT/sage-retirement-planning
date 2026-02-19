@@ -60,6 +60,10 @@ export function useVoiceSession(options: VoiceSessionOptions = {}) {
   const audioBufferQueueRef = useRef<AudioBufferQueue | null>(null)
   const mediaStreamRef = useRef<MediaStream | null>(null)
 
+  // Holds the server's latest status when we defer applying it
+  // (e.g. server says "listening" but audio is still playing)
+  const pendingStatusRef = useRef<VoiceStatus | null>(null)
+
   /**
    * Send message to WebSocket
    */
@@ -79,18 +83,59 @@ export function useVoiceSession(options: VoiceSessionOptions = {}) {
 
         switch (message.type) {
           case 'status': {
-            const newStatus = message.data.status
-            // If transitioning away from "speaking", flush audio queue
-            // so the AI's voice stops immediately on interrupt
-            if (newStatus !== 'speaking' && audioBufferQueueRef.current) {
-              audioBufferQueueRef.current.clear()
+            const newStatus = message.data.status as VoiceStatus | 'interrupted' | 'generation_done'
+
+            if (newStatus === 'interrupted') {
+              // Server VAD detected barge-in and auto-cancelled the response.
+              // Clear queued audio immediately so AI speech stops.
+              console.log('[Voice] interrupted — clearing audio queue')
+              if (audioBufferQueueRef.current) {
+                audioBufferQueueRef.current.clear()
+              }
+              pendingStatusRef.current = null
+              setStatus('listening')
+            } else if (newStatus === 'generation_done') {
+              // Server finished generating all audio chunks (RESPONSE_DONE).
+              // Audio queue likely still has seconds of buffered audio.
+              console.log('[Voice] generation_done — buffered ahead:', audioBufferQueueRef.current?.bufferedAhead.toFixed(2), 's')
+              pendingStatusRef.current = 'listening'
+              if (audioBufferQueueRef.current) {
+                audioBufferQueueRef.current.markGenerationComplete()
+              }
+              // If nothing is scheduled, transition immediately
+              if (audioBufferQueueRef.current && !audioBufferQueueRef.current.isPlaying) {
+                console.log('[Voice] generation_done — nothing playing, immediate transition')
+                pendingStatusRef.current = null
+                setStatus('listening')
+              }
+            } else if (pendingStatusRef.current !== null) {
+              // While waiting for audio to drain, ignore stale VAD events.
+              // Accept "speaking" (new response) but block everything else.
+              if (newStatus === 'speaking') {
+                console.log('[Voice] new response while draining — accepting speaking')
+                pendingStatusRef.current = null
+                if (audioBufferQueueRef.current) {
+                  audioBufferQueueRef.current.generationComplete = false
+                }
+                setStatus('speaking')
+              } else {
+                console.log('[Voice] ignoring status', newStatus, 'while waiting for audio drain')
+              }
+            } else {
+              pendingStatusRef.current = null
+
+              // Reset generationComplete when a new response starts
+              if (newStatus === 'speaking' && audioBufferQueueRef.current) {
+                audioBufferQueueRef.current.generationComplete = false
+              }
+
+              if (newStatus === 'idle') {
+                setInterimTranscript('')
+                setInterimRole(null)
+              }
+              console.log('[Voice] status:', newStatus)
+              setStatus(newStatus as VoiceStatus)
             }
-            // Clear interim transcript when going idle
-            if (newStatus === 'idle') {
-              setInterimTranscript('')
-              setInterimRole(null)
-            }
-            setStatus(newStatus)
             break
           }
 
@@ -104,9 +149,13 @@ export function useVoiceSession(options: VoiceSessionOptions = {}) {
             break
 
           case 'transcript':
-            // Track interim transcripts for live display
+            // Handle transcript updates from the server.
+            // interimTranscript is used for the live "typing" bubble in the UI.
+            // onTranscript callback is used by consumers to add final messages to chat.
             if (message.data.isFinal) {
-              // Clear interim display when final arrives
+              // Final transcript — clear the interim display IMMEDIATELY
+              // so there's no frame where both the interim bubble and the
+              // permanent chat message are visible at the same time.
               interimTranscriptRef.current = ''
               interimRoleRef.current = null
               if (interimUpdateTimer.current) {
@@ -116,7 +165,8 @@ export function useVoiceSession(options: VoiceSessionOptions = {}) {
               setInterimTranscript('')
               setInterimRole(null)
             } else {
-              // Throttle interim updates to ~50ms (20fps for text is sufficient)
+              // Streaming delta — update the live transcript bubble.
+              // Show text immediately (no delay) so user sees what's being said.
               interimTranscriptRef.current = message.data.text
               interimRoleRef.current = message.data.role || 'assistant'
               if (!interimUpdateTimer.current) {
@@ -127,7 +177,7 @@ export function useVoiceSession(options: VoiceSessionOptions = {}) {
                 }, 50)
               }
             }
-            // Existing callback
+            // Fire the callback for consumers (adds final messages to chat)
             if (onTranscript) {
               onTranscript(
                 message.data.text,
@@ -188,6 +238,17 @@ export function useVoiceSession(options: VoiceSessionOptions = {}) {
       // Initialize audio buffer queue for playback
       if (!audioBufferQueueRef.current) {
         audioBufferQueueRef.current = new AudioBufferQueue(24000)
+      }
+
+      // When all queued audio finishes playing, apply any deferred status
+      // and unmute the mic so the user can speak again.
+      audioBufferQueueRef.current.onDrained = () => {
+        console.log('[Voice] audio queue drained, pending:', pendingStatusRef.current)
+        const pending = pendingStatusRef.current
+        if (pending) {
+          pendingStatusRef.current = null
+          setStatus(pending)
+        }
       }
 
       // Resume audio context (required for iOS Safari)
