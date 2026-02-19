@@ -652,9 +652,10 @@ const writeLocalArray = (key: string, value: any[]) => {
 export const submitScenarioConsent = async (
   request: ScenarioConsentRequest,
 ): Promise<ScenarioConsentResponse> => {
+  const advisorId = request.advisor_id || getDefaultAdvisorIdForUser(request.user_id)
+
   if (currentApiMode === "mock") {
     await simulateDelay(250)
-    const advisorId = request.advisor_id || getDefaultAdvisorIdForUser(request.user_id)
     const consentId = `consent-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
     const consentRecord = {
       id: consentId,
@@ -702,7 +703,7 @@ export const submitScenarioConsent = async (
   const response = await makeApiCall(`/api/scenario-consent/${request.user_id}`, {
     method: "POST",
     body: JSON.stringify({
-      advisor_id: request.advisor_id,
+      advisor_id: advisorId,
       scenario_description: request.scenario_description,
       analysis_payload: request.analysis_payload,
       consent_status: request.consent_status,
@@ -710,7 +711,14 @@ export const submitScenarioConsent = async (
   })
 
   if (!response.ok) {
-    throw new Error(`Failed to submit consent: HTTP ${response.status}`)
+    let detail = ""
+    try {
+      const errorBody = await response.json()
+      detail = errorBody?.detail ? ` (${errorBody.detail})` : ""
+    } catch {
+      detail = ""
+    }
+    throw new Error(`Failed to submit consent: HTTP ${response.status}${detail}`)
   }
 
   return await response.json()

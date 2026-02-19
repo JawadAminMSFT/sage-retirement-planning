@@ -18,7 +18,12 @@ import {
 import type { EscalationTicket, EscalationStatus, EscalationPriority, ResolutionType, ClientProfile } from "@/lib/types"
 import { Card, EmptyState, Skeleton } from "@/components/frontend/shared/UIComponents"
 import { PoweredByLabel } from "@/components/frontend/shared/PoweredByLabel"
-import { getMockScenarioShareEscalations } from "@/lib/advisorApi"
+import {
+  getMockScenarioShareEscalations,
+  getAdvisorEscalations,
+  updateEscalation,
+  resolveEscalation,
+} from "@/lib/advisorApi"
 
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -498,20 +503,34 @@ export const EscalationQueue: React.FC<EscalationQueueProps> = ({
     loadEscalations()
   }, [advisorId, isMockMode])
   
-  const loadEscalations = () => {
+  const loadEscalations = async () => {
     setIsLoading(true)
-    setTimeout(() => {
-      const shareEscalations = getMockScenarioShareEscalations(advisorId)
-      const combined = [...shareEscalations, ...MOCK_ESCALATIONS]
-      const seen = new Set<string>()
-      const deduped = combined.filter((e) => {
-        if (seen.has(e.id)) return false
-        seen.add(e.id)
-        return true
-      })
-      setEscalations(deduped)
+
+    if (isMockMode) {
+      setTimeout(() => {
+        const shareEscalations = getMockScenarioShareEscalations(advisorId)
+        const combined = [...shareEscalations, ...MOCK_ESCALATIONS]
+        const seen = new Set<string>()
+        const deduped = combined.filter((e) => {
+          if (seen.has(e.id)) return false
+          seen.add(e.id)
+          return true
+        })
+        setEscalations(deduped)
+        setIsLoading(false)
+      }, 500)
+      return
+    }
+
+    try {
+      const data = await getAdvisorEscalations(advisorId)
+      setEscalations(data)
+    } catch (error) {
+      console.error("Failed to load escalations:", error)
+      setEscalations([])
+    } finally {
       setIsLoading(false)
-    }, 500)
+    }
   }
   
   const filteredEscalations = escalations.filter(e => {
@@ -535,36 +554,61 @@ export const EscalationQueue: React.FC<EscalationQueueProps> = ({
   const pendingCount = escalations.filter(e => e.status === "pending").length
   const inProgressCount = escalations.filter(e => e.status === "in_progress").length
   
-  const handleResolve = (resolution: { type: ResolutionType; notes: string }) => {
+  const handleResolve = async (resolution: { type: ResolutionType; notes: string }) => {
     if (!selectedEscalation) return
-    
-    setEscalations(escalations.map(e => 
-      e.id === selectedEscalation.id
-        ? { 
-            ...e, 
-            status: "resolved" as EscalationStatus,
-            resolution_type: resolution.type,
-            resolution_notes: resolution.notes,
-            resolved_at: new Date().toISOString()
-          }
-        : e
-    ))
-    setSelectedEscalation(null)
+
+    if (isMockMode) {
+      setEscalations(escalations.map(e => 
+        e.id === selectedEscalation.id
+          ? {
+              ...e,
+              status: "resolved" as EscalationStatus,
+              resolution_type: resolution.type,
+              resolution_notes: resolution.notes,
+              resolved_at: new Date().toISOString()
+            }
+          : e
+      ))
+      setSelectedEscalation(null)
+      return
+    }
+
+    try {
+      const updated = await resolveEscalation(selectedEscalation.id, {
+        resolution_type: resolution.type,
+        resolution_notes: resolution.notes,
+      })
+      setEscalations((prev) => prev.map((e) => (e.id === updated.id ? updated : e)))
+      setSelectedEscalation(null)
+    } catch (error) {
+      console.error("Failed to resolve escalation:", error)
+    }
   }
   
-  const handleUpdateStatus = (status: EscalationStatus) => {
+  const handleUpdateStatus = async (status: EscalationStatus) => {
     if (!selectedEscalation) return
-    
-    setEscalations(escalations.map(e => 
-      e.id === selectedEscalation.id
-        ? { 
-            ...e, 
-            status,
-            acknowledged_at: status === "in_progress" ? new Date().toISOString() : e.acknowledged_at
-          }
-        : e
-    ))
-    setSelectedEscalation(prev => prev ? { ...prev, status } : null)
+
+    if (isMockMode) {
+      setEscalations(escalations.map(e => 
+        e.id === selectedEscalation.id
+          ? {
+              ...e,
+              status,
+              acknowledged_at: status === "in_progress" ? new Date().toISOString() : e.acknowledged_at
+            }
+          : e
+      ))
+      setSelectedEscalation(prev => prev ? { ...prev, status } : null)
+      return
+    }
+
+    try {
+      const updated = await updateEscalation(selectedEscalation.id, { status })
+      setEscalations((prev) => prev.map((e) => (e.id === updated.id ? updated : e)))
+      setSelectedEscalation(updated)
+    } catch (error) {
+      console.error("Failed to update escalation status:", error)
+    }
   }
   
   if (isLoading) {
@@ -640,7 +684,7 @@ export const EscalationQueue: React.FC<EscalationQueueProps> = ({
               <EscalationCard
                 key={escalation.id}
                 escalation={escalation}
-                client={MOCK_CLIENTS[escalation.client_id]}
+                client={isMockMode ? MOCK_CLIENTS[escalation.client_id] : undefined}
                 onClick={() => setSelectedEscalation(escalation)}
               />
             ))}
@@ -652,7 +696,7 @@ export const EscalationQueue: React.FC<EscalationQueueProps> = ({
       {selectedEscalation && (
         <EscalationDetailModal
           escalation={selectedEscalation}
-          client={MOCK_CLIENTS[selectedEscalation.client_id]}
+          client={isMockMode ? MOCK_CLIENTS[selectedEscalation.client_id] : undefined}
           onClose={() => setSelectedEscalation(null)}
           onResolve={handleResolve}
           onUpdateStatus={handleUpdateStatus}
