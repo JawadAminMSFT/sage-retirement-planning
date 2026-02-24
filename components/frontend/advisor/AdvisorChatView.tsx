@@ -32,9 +32,8 @@ import {
   type ConversationSummary,
 } from "@/lib/api"
 import { useVoiceSession } from "@/components/frontend/shared/voice/useVoiceSession"
-import VoiceButton from "@/components/frontend/shared/voice/VoiceButton"
-import VoiceWaveform from "@/components/frontend/shared/voice/VoiceWaveform"
-import VoiceStatusIndicator from "@/components/frontend/shared/voice/VoiceStatusIndicator"
+import FullCanvasVoiceView from "@/components/frontend/shared/voice/FullCanvasVoiceView"
+import type { CommunicationMode } from "@/components/frontend/shared/SageChatPane"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -43,6 +42,7 @@ interface AdvisorChatViewProps {
   clients: ClientProfile[]
   isMockMode?: boolean
   embedded?: boolean
+  communicationMode?: CommunicationMode
 }
 
 interface ChatMessage {
@@ -504,6 +504,7 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
   clients,
   isMockMode = true,
   embedded = false,
+  communicationMode = "chat",
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState("")
@@ -854,8 +855,25 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
         </div>
       )}
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4">
+      {/* Voice Mode — full canvas immersive view */}
+      {communicationMode === "voice" && (
+        <FullCanvasVoiceView
+          variant="advisor"
+          voiceStatus={voiceSession.status}
+          inputLevelRef={voiceSession.audioLevelRef}
+          outputLevelRef={voiceSession.outputAudioLevelRef}
+          interimTranscript={voiceSession.interimTranscript}
+          interimRole={voiceSession.interimRole}
+          onToggleSession={voiceSession.toggleSession}
+          error={voiceSession.error}
+        />
+      )}
+
+      {/* Chat Mode — messages + text input */}
+      {communicationMode === "chat" && (
+        <>
+          {/* Messages Area */}
+          <div className="flex-1 overflow-y-auto p-4">
         {messages.length === 0 ? (
           <div className="max-w-2xl mx-auto">
             <div className="text-center mb-8">
@@ -927,43 +945,6 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
               </div>
             )}
 
-            {/* Live voice transcript bubble */}
-            {voiceSession.interimTranscript && (
-              voiceSession.interimRole === "user" ? (
-                <div className="flex justify-end mb-4 animate-in fade-in duration-200">
-                  <div className="max-w-[80%] bg-emerald-600 text-white rounded-2xl rounded-br-sm px-4 py-3">
-                    <p className="text-sm whitespace-pre-wrap">
-                      {voiceSession.interimTranscript}
-                      <span className="inline-block w-1.5 h-3.5 ml-1 bg-white/60 animate-pulse rounded-sm align-text-bottom" />
-                    </p>
-                    <div className="flex items-center gap-1.5 mt-1.5 justify-end">
-                      <span className="relative flex h-1.5 w-1.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white/60 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white/80"></span>
-                      </span>
-                      <span className="text-[10px] text-white/70">Speaking...</span>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex justify-start mb-4 animate-in fade-in duration-200">
-                  <div className="max-w-[80%] bg-white border rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
-                    <p className="text-sm whitespace-pre-wrap text-gray-900">
-                      {voiceSession.interimTranscript}
-                      <span className="inline-block w-1.5 h-3.5 ml-1 bg-gray-400/60 animate-pulse rounded-sm align-text-bottom" />
-                    </p>
-                    <div className="flex items-center gap-1.5 mt-1.5">
-                      <span className="relative flex h-1.5 w-1.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-500"></span>
-                      </span>
-                      <span className="text-[10px] text-gray-400">Speaking...</span>
-                    </div>
-                  </div>
-                </div>
-              )
-            )}
-
             <div ref={messagesEndRef} />
           </div>
         )}
@@ -973,67 +954,25 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
       <div className="flex-shrink-0 p-4 bg-white border-t">
         <div className="max-w-3xl mx-auto">
           <div className="flex gap-3">
-            {/* Voice Button - LEFT */}
-            <VoiceButton
-              variant="advisor"
-              isActive={voiceSession.status !== "idle"}
-              isDisabled={isLoading}
-              onToggle={voiceSession.toggleSession}
-            />
-
-            {/* Conditional Input Area */}
-            {voiceSession.status === "idle" ? (
-              <div className="flex-1 relative animate-in fade-in duration-200">
-                <textarea
-                  ref={inputRef}
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Ask about regulations, client strategies, or planning scenarios..."
-                  className="w-full px-4 py-3 pr-12 border rounded-xl resize-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300"
-                  rows={1}
-                  disabled={isLoading}
-                />
-                <button
-                  onClick={() => handleSend()}
-                  disabled={!inputValue.trim() || isLoading}
-                  className="absolute right-2 bottom-2 p-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                </button>
-              </div>
-            ) : (
-              <div className="flex-1 px-4 py-2 border border-indigo-300 rounded-xl bg-white relative overflow-hidden animate-in fade-in duration-200">
-                {/* Status pill */}
-                <div className="flex justify-center mb-1">
-                  <VoiceStatusIndicator
-                    status={voiceSession.status}
-                    variant="advisor"
-                  />
-                </div>
-
-                {/* Waveform */}
-                <VoiceWaveform
-                  audioLevelRef={voiceSession.audioLevelRef}
-                  variant="advisor"
-                  isActive={voiceSession.status === "listening" || voiceSession.status === "speaking"}
-                  voiceStatus={voiceSession.status}
-                />
-
-                {/* Live transcript */}
-                {voiceSession.interimTranscript && (
-                  <div className="mt-1 text-center animate-in fade-in duration-150">
-                    <p className="text-xs text-indigo-600/80 truncate max-w-full px-2">
-                      {voiceSession.interimRole === "user" ? (
-                        <span className="italic">&ldquo;{voiceSession.interimTranscript}&rdquo;</span>
-                      ) : (
-                        <span>Sage: {voiceSession.interimTranscript}</span>
-                      )}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
+            <div className="flex-1 relative animate-in fade-in duration-200">
+              <textarea
+                ref={inputRef}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask about regulations, client strategies, or planning scenarios..."
+                className="w-full px-4 py-3 pr-12 border rounded-xl resize-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300"
+                rows={1}
+                disabled={isLoading}
+              />
+              <button
+                onClick={() => handleSend()}
+                disabled={!inputValue.trim() || isLoading}
+                className="absolute right-2 bottom-2 p-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
           <div className="flex items-center justify-center gap-2 mt-2">
             <p className="text-xs text-gray-400 text-center">
@@ -1042,6 +981,8 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
           </div>
         </div>
       </div>
+        </>
+      )}
     </div>
   )
 }

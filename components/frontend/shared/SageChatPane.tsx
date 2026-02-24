@@ -1,8 +1,10 @@
 "use client"
 
 import React, { useEffect } from "react"
-import { X, Leaf } from "lucide-react"
+import { X, Leaf, MessageSquare, Mic } from "lucide-react"
 import { PoweredByLabel } from "@/components/frontend/shared/PoweredByLabel"
+
+export type CommunicationMode = "chat" | "voice"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -11,6 +13,8 @@ interface SageChatPaneProps {
   onClose: () => void
   children: React.ReactNode
   variant?: "client" | "advisor"
+  communicationMode: CommunicationMode
+  onCommunicationModeChange: (mode: CommunicationMode) => void
 }
 
 // ─── Floating Sage Button ───────────────────────────────────────────────────
@@ -50,6 +54,8 @@ export const SageChatPane: React.FC<SageChatPaneProps> = ({
   onClose,
   children,
   variant = "client",
+  communicationMode,
+  onCommunicationModeChange,
 }) => {
   const isAdvisor = variant === "advisor"
 
@@ -97,12 +103,41 @@ export const SageChatPane: React.FC<SageChatPaneProps> = ({
                 </div>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"
-            >
-              <X className="w-5 h-5 text-gray-400" />
-            </button>
+
+            <div className="flex items-center gap-3">
+              {/* Chat / Voice toggle */}
+              <div className="flex items-center bg-white/10 rounded-xl p-1">
+                <button
+                  onClick={() => onCommunicationModeChange("chat")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                    communicationMode === "chat"
+                      ? "bg-white/20 text-white shadow-sm"
+                      : "text-gray-400 hover:text-white/70"
+                  }`}
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  Chat
+                </button>
+                <button
+                  onClick={() => onCommunicationModeChange("voice")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                    communicationMode === "voice"
+                      ? `${isAdvisor ? "bg-indigo-500/30 text-indigo-200" : "bg-emerald-500/30 text-emerald-200"} shadow-sm`
+                      : "text-gray-400 hover:text-white/70"
+                  }`}
+                >
+                  <Mic className="w-3.5 h-3.5" />
+                  Voice
+                </button>
+              </div>
+
+              <button
+                onClick={onClose}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
           </div>
 
           {/* Chat Content */}

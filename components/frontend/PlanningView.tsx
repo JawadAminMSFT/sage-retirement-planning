@@ -27,9 +27,8 @@ import { StatusBubble } from "@/components/frontend/StatusBubble"
 import { QuickScenariosCard } from "@/components/frontend/QuickScenariosCard"
 import { AnalysisCard } from "@/components/frontend/AnalysisCard"
 import { useVoiceSession } from "@/components/frontend/shared/voice/useVoiceSession"
-import VoiceButton from "@/components/frontend/shared/voice/VoiceButton"
-import VoiceWaveform from "@/components/frontend/shared/voice/VoiceWaveform"
-import VoiceStatusIndicator from "@/components/frontend/shared/voice/VoiceStatusIndicator"
+import FullCanvasVoiceView from "@/components/frontend/shared/voice/FullCanvasVoiceView"
+import type { CommunicationMode } from "@/components/frontend/shared/SageChatPane"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -38,6 +37,7 @@ interface PlanningViewProps {
   isMockMode: boolean
   onBack: () => void
   embedded?: boolean
+  communicationMode?: CommunicationMode
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -47,6 +47,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
   isMockMode,
   onBack,
   embedded = false,
+  communicationMode = "chat",
 }) => {
   const [isClient, setIsClient] = useState(false)
   const [messages, setMessages] = useState<ExtendedChatMessage[]>([
@@ -651,248 +652,174 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
         </div>
       )}
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-6 space-y-8 max-w-4xl mx-auto">
-          {messages.map((message, index) => (
-            <div
-              key={index}
-              className={`flex gap-4 animate-in fade-in duration-300 ${
-                message.role === "user" ? "flex-row-reverse" : ""
-              }`}
-            >
-              {/* Avatar */}
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm ${
-                  message.role === "user"
-                    ? "bg-gray-700"
-                    : "bg-gradient-to-br from-green-500 to-emerald-600"
-                }`}
-              >
-                {message.role === "user" ? (
-                  <span className="text-white text-sm font-bold">U</span>
-                ) : (
-                  <Bot className="w-5 h-5 text-white" />
-                )}
-              </div>
+      {/* Voice Mode — full canvas immersive view */}
+      {communicationMode === "voice" && (
+        <FullCanvasVoiceView
+          variant="client"
+          voiceStatus={voiceSession.status}
+          inputLevelRef={voiceSession.audioLevelRef}
+          outputLevelRef={voiceSession.outputAudioLevelRef}
+          interimTranscript={voiceSession.interimTranscript}
+          interimRole={voiceSession.interimRole}
+          onToggleSession={voiceSession.toggleSession}
+          error={voiceSession.error}
+        />
+      )}
 
-              {/* Content */}
-              <div
-                className={`flex-1 max-w-5xl ${
-                  message.role === "user" ? "text-right" : ""
-                }`}
-              >
+      {/* Chat Mode — messages + text input */}
+      {communicationMode === "chat" && (
+        <>
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-6 space-y-8 max-w-4xl mx-auto">
+              {messages.map((message, index) => (
                 <div
-                  className={`inline-block p-4 rounded-2xl ${
-                    message.role === "user"
-                      ? "bg-gradient-to-br from-green-600 to-emerald-700 text-white shadow-sm"
-                      : "bg-gray-50/80 text-gray-900 border border-gray-200/60"
+                  key={index}
+                  className={`flex gap-4 animate-in fade-in duration-300 ${
+                    message.role === "user" ? "flex-row-reverse" : ""
                   }`}
                 >
-                  {message.content}
-                </div>
-
-                <div
-                  className={`text-xs text-gray-400 mt-2 ${
-                    message.role === "user" ? "text-right" : ""
-                  }`}
-                >
-                  {isClient &&
-                    new Date(message.timestamp).toLocaleTimeString()}
-                </div>
-
-                {message.role === "assistant" &&
-                  message.showQuickScenarios && (
-                    <QuickScenariosCard
-                      scenarios={quickScenarios}
-                      onSelectScenario={sendMessage}
-                    />
-                  )}
-
-                {message.role === "assistant" && message.analysis && (
-                  <AnalysisCard
-                    analysis={message.analysis}
-                    messageIndex={index}
-                    evaluationContext={message.evaluationContext}
-                    evaluationResults={evaluationResults}
-                    evaluatingMessages={evaluatingMessages}
-                    onEvaluate={handleEvaluateMessage}
-                    onSendMessage={sendMessage}
-                  />
-                )}
-
-                {message.role === "assistant" && message.consentRequest && (
-                  <div className="mt-4 p-4 rounded-2xl border border-emerald-200 bg-emerald-50/70">
-                    <h4 className="text-sm font-semibold text-emerald-900">
-                      This scenario looks complex — share with your advisor?
-                    </h4>
-                    <p className="text-sm text-emerald-800 mt-1 leading-relaxed">
-                      With your consent, Sage will share this scenario analysis with your advisor so they can review it and follow up with you.
-                    </p>
-
-                    {message.consentRequest.status === "pending" && (
-                      <div className="mt-3 flex items-center gap-2">
-                        <button
-                          onClick={() => handleConsentDecision(index, "accepted")}
-                          className="px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700"
-                        >
-                          Yes, share with advisor
-                        </button>
-                        <button
-                          onClick={() => handleConsentDecision(index, "rejected")}
-                          className="px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-                        >
-                          No, keep private
-                        </button>
-                      </div>
-                    )}
-
-                    {message.consentRequest.status === "submitting" && (
-                      <p className="mt-3 text-sm text-emerald-700">Submitting your choice...</p>
-                    )}
-
-                    {message.consentRequest.status === "accepted" && (
-                      <p className="mt-3 text-sm text-emerald-700 font-medium">
-                        Shared with your advisor. They have been notified for review and follow-up.
-                      </p>
-                    )}
-
-                    {message.consentRequest.status === "rejected" && (
-                      <p className="mt-3 text-sm text-gray-700 font-medium">
-                        Kept private. This scenario will not be shared with your advisor.
-                      </p>
+                  {/* Avatar */}
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm ${
+                      message.role === "user"
+                        ? "bg-gray-700"
+                        : "bg-gradient-to-br from-green-500 to-emerald-600"
+                    }`}
+                  >
+                    {message.role === "user" ? (
+                      <span className="text-white text-sm font-bold">U</span>
+                    ) : (
+                      <Bot className="w-5 h-5 text-white" />
                     )}
                   </div>
-                )}
-              </div>
-            </div>
-          ))}
 
-          {currentStatus && <StatusBubble status={currentStatus} />}
+                  {/* Content */}
+                  <div
+                    className={`flex-1 max-w-5xl ${
+                      message.role === "user" ? "text-right" : ""
+                    }`}
+                  >
+                    <div
+                      className={`inline-block p-4 rounded-2xl ${
+                        message.role === "user"
+                          ? "bg-gradient-to-br from-green-600 to-emerald-700 text-white shadow-sm"
+                          : "bg-gray-50/80 text-gray-900 border border-gray-200/60"
+                      }`}
+                    >
+                      {message.content}
+                    </div>
 
-          {/* Live voice transcript bubble */}
-          {voiceSession.interimTranscript && (
-            <div
-              className={`flex gap-4 animate-in fade-in duration-200 ${
-                voiceSession.interimRole === "user" ? "flex-row-reverse" : ""
-              }`}
-            >
-              {/* Avatar */}
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm ${
-                  voiceSession.interimRole === "user"
-                    ? "bg-gray-700"
-                    : "bg-gradient-to-br from-green-500 to-emerald-600"
-                }`}
-              >
-                {voiceSession.interimRole === "user" ? (
-                  <span className="text-white text-sm font-bold">U</span>
-                ) : (
-                  <Bot className="w-5 h-5 text-white" />
-                )}
-              </div>
+                    <div
+                      className={`text-xs text-gray-400 mt-2 ${
+                        message.role === "user" ? "text-right" : ""
+                      }`}
+                    >
+                      {isClient &&
+                        new Date(message.timestamp).toLocaleTimeString()}
+                    </div>
 
-              {/* Content */}
-              <div
-                className={`flex-1 max-w-5xl ${
-                  voiceSession.interimRole === "user" ? "text-right" : ""
-                }`}
-              >
-                <div
-                  className={`inline-block p-4 rounded-2xl ${
-                    voiceSession.interimRole === "user"
-                      ? "bg-gradient-to-br from-green-600 to-emerald-700 text-white shadow-sm"
-                      : "bg-gray-50/80 text-gray-900 border border-gray-200/60"
-                  }`}
-                >
-                  <span>{voiceSession.interimTranscript}</span>
-                  <span className="inline-block w-1.5 h-4 ml-1 bg-current opacity-60 animate-pulse rounded-sm align-text-bottom" />
+                    {message.role === "assistant" &&
+                      message.showQuickScenarios && (
+                        <QuickScenariosCard
+                          scenarios={quickScenarios}
+                          onSelectScenario={sendMessage}
+                        />
+                      )}
+
+                    {message.role === "assistant" && message.analysis && (
+                      <AnalysisCard
+                        analysis={message.analysis}
+                        messageIndex={index}
+                        evaluationContext={message.evaluationContext}
+                        evaluationResults={evaluationResults}
+                        evaluatingMessages={evaluatingMessages}
+                        onEvaluate={handleEvaluateMessage}
+                        onSendMessage={sendMessage}
+                      />
+                    )}
+
+                    {message.role === "assistant" && message.consentRequest && (
+                      <div className="mt-4 p-4 rounded-2xl border border-emerald-200 bg-emerald-50/70">
+                        <h4 className="text-sm font-semibold text-emerald-900">
+                          This scenario looks complex — share with your advisor?
+                        </h4>
+                        <p className="text-sm text-emerald-800 mt-1 leading-relaxed">
+                          With your consent, Sage will share this scenario analysis with your advisor so they can review it and follow up with you.
+                        </p>
+
+                        {message.consentRequest.status === "pending" && (
+                          <div className="mt-3 flex items-center gap-2">
+                            <button
+                              onClick={() => handleConsentDecision(index, "accepted")}
+                              className="px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700"
+                            >
+                              Yes, share with advisor
+                            </button>
+                            <button
+                              onClick={() => handleConsentDecision(index, "rejected")}
+                              className="px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                            >
+                              No, keep private
+                            </button>
+                          </div>
+                        )}
+
+                        {message.consentRequest.status === "submitting" && (
+                          <p className="mt-3 text-sm text-emerald-700">Submitting your choice...</p>
+                        )}
+
+                        {message.consentRequest.status === "accepted" && (
+                          <p className="mt-3 text-sm text-emerald-700 font-medium">
+                            Shared with your advisor. They have been notified for review and follow-up.
+                          </p>
+                        )}
+
+                        {message.consentRequest.status === "rejected" && (
+                          <p className="mt-3 text-sm text-gray-700 font-medium">
+                            Kept private. This scenario will not be shared with your advisor.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className={`text-xs text-gray-400 mt-2 flex items-center gap-1.5 ${
-                  voiceSession.interimRole === "user" ? "justify-end" : ""
-                }`}>
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                  </span>
-                  Speaking...
-                </div>
-              </div>
+              ))}
+
+              {currentStatus && <StatusBubble status={currentStatus} />}
+
+              <div ref={messagesEndRef} />
             </div>
-          )}
+          </div>
 
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
-
-      {/* Input */}
-      <div className="border-t border-gray-200/60 p-4 sm:p-6 bg-white/60 backdrop-blur-sm">
-        <div className="flex gap-3 items-end max-w-4xl mx-auto">
-          {/* Voice Button - LEFT */}
-          <VoiceButton
-            variant="client"
-            isActive={voiceSession.status !== "idle"}
-            isDisabled={isLoading || !selectedProfile}
-            onToggle={voiceSession.toggleSession}
-          />
-
-          {/* Conditional Input Area */}
-          {voiceSession.status === "idle" ? (
-            <textarea
-              ref={textareaRef}
-              value={currentMessage}
-              onChange={(e) => setCurrentMessage(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask me about your retirement planning goals..."
-              disabled={isLoading || !selectedProfile}
-              rows={1}
-              className="flex-1 px-4 py-3 border border-green-300/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40 focus:border-green-500/60 text-base placeholder-gray-400 bg-white/80 backdrop-blur-sm resize-none leading-normal animate-in fade-in duration-200"
-            />
-          ) : (
-            <div className="flex-1 px-4 py-2 border border-emerald-300 rounded-xl bg-white/80 backdrop-blur-sm relative overflow-hidden animate-in fade-in duration-200">
-              {/* Status pill */}
-              <div className="flex justify-center mb-1">
-                <VoiceStatusIndicator
-                  status={voiceSession.status}
-                  variant="client"
-                />
-              </div>
-
-              {/* Waveform */}
-              <VoiceWaveform
-                audioLevelRef={voiceSession.audioLevelRef}
-                variant="client"
-                isActive={voiceSession.status === "listening" || voiceSession.status === "speaking"}
-                voiceStatus={voiceSession.status}
+          {/* Input */}
+          <div className="border-t border-gray-200/60 p-4 sm:p-6 bg-white/60 backdrop-blur-sm">
+            <div className="flex gap-3 items-end max-w-4xl mx-auto">
+              <textarea
+                ref={textareaRef}
+                value={currentMessage}
+                onChange={(e) => setCurrentMessage(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask me about your retirement planning goals..."
+                disabled={isLoading || !selectedProfile}
+                rows={1}
+                className="flex-1 px-4 py-3 border border-green-300/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/40 focus:border-green-500/60 text-base placeholder-gray-400 bg-white/80 backdrop-blur-sm resize-none leading-normal animate-in fade-in duration-200"
               />
 
-              {/* Live transcript */}
-              {voiceSession.interimTranscript && (
-                <div className="mt-1 text-center animate-in fade-in duration-150">
-                  <p className="text-xs text-emerald-600/80 truncate max-w-full px-2">
-                    {voiceSession.interimRole === "user" ? (
-                      <span className="italic">&ldquo;{voiceSession.interimTranscript}&rdquo;</span>
-                    ) : (
-                      <span>Sage: {voiceSession.interimTranscript}</span>
-                    )}
-                  </p>
-                </div>
-              )}
+              {/* Send Button */}
+              <button
+                onClick={() => sendMessage(currentMessage)}
+                disabled={
+                  isLoading || !currentMessage.trim() || !selectedProfile
+                }
+                className="bg-gradient-to-br from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-3 rounded-xl transition-all shadow-sm hover:shadow-md flex items-center justify-center"
+              >
+                <Send className="w-5 h-5" />
+              </button>
             </div>
-          )}
-
-          {/* Send Button - RIGHT */}
-          <button
-            onClick={() => sendMessage(currentMessage)}
-            disabled={
-              isLoading || !currentMessage.trim() || !selectedProfile || voiceSession.status !== "idle"
-            }
-            className="bg-gradient-to-br from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-3 rounded-xl transition-all shadow-sm hover:shadow-md flex items-center justify-center"
-          >
-            <Send className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

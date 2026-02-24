@@ -82,6 +82,10 @@ export class AudioBufferQueue {
   private activeSources: AudioBufferSourceNode[] = []
   private drainPollTimer: ReturnType<typeof setInterval> | null = null
 
+  /** AnalyserNode for output audio level visualization */
+  private analyser: AnalyserNode
+  private analyserBuffer: Float32Array
+
   /** Playback speed — 1.0 matches the server's generation rate */
   playbackRate: number = 1.0
 
@@ -103,6 +107,27 @@ export class AudioBufferQueue {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
     this.audioContext = new AudioContextClass({ sampleRate })
     this.sampleRate = sampleRate
+
+    // Create analyser node for output level metering
+    this.analyser = this.audioContext.createAnalyser()
+    this.analyser.fftSize = 2048
+    this.analyser.smoothingTimeConstant = 0.3
+    this.analyser.connect(this.audioContext.destination)
+    this.analyserBuffer = new Float32Array(this.analyser.fftSize)
+  }
+
+  /**
+   * Get current output audio level (0–1) from the analyser.
+   * Call this every animation frame for smooth visualization.
+   */
+  getOutputLevel(): number {
+    this.analyser.getFloatTimeDomainData(this.analyserBuffer)
+    let sumSquares = 0
+    for (let i = 0; i < this.analyserBuffer.length; i++) {
+      sumSquares += this.analyserBuffer[i] * this.analyserBuffer[i]
+    }
+    const rms = Math.sqrt(sumSquares / this.analyserBuffer.length)
+    return Math.min(1, rms * 5)
   }
 
   /**
@@ -121,7 +146,7 @@ export class AudioBufferQueue {
     const source = this.audioContext.createBufferSource()
     source.buffer = audioBuffer
     source.playbackRate.value = this.playbackRate
-    source.connect(this.audioContext.destination)
+    source.connect(this.analyser)
 
     const currentTime = this.audioContext.currentTime
     const startTime = Math.max(currentTime, this.nextStartTime)

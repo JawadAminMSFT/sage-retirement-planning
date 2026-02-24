@@ -48,6 +48,8 @@ export function useVoiceSession(options: VoiceSessionOptions = {}) {
 
   // Audio level stored as ref to avoid React re-renders on every frame
   const audioLevelRef = useRef(0)
+  // Output (AI playback) audio level — separate ref for dual waveform
+  const outputAudioLevelRef = useRef(0)
 
   // Throttle interim transcript updates to ~50ms to avoid excessive re-renders
   const interimTranscriptRef = useRef('')
@@ -59,6 +61,7 @@ export function useVoiceSession(options: VoiceSessionOptions = {}) {
   const audioProcessorRef = useRef<{ stop: () => void } | null>(null)
   const audioBufferQueueRef = useRef<AudioBufferQueue | null>(null)
   const mediaStreamRef = useRef<MediaStream | null>(null)
+  const outputLevelRafRef = useRef<number | null>(null)
 
   // Holds the server's latest status when we defer applying it
   // (e.g. server says "listening" but audio is still playing)
@@ -254,6 +257,15 @@ export function useVoiceSession(options: VoiceSessionOptions = {}) {
       // Resume audio context (required for iOS Safari)
       await audioBufferQueueRef.current.resume()
 
+      // Start polling output audio level for visualization
+      const pollOutputLevel = () => {
+        if (audioBufferQueueRef.current) {
+          outputAudioLevelRef.current = audioBufferQueueRef.current.getOutputLevel()
+        }
+        outputLevelRafRef.current = requestAnimationFrame(pollOutputLevel)
+      }
+      outputLevelRafRef.current = requestAnimationFrame(pollOutputLevel)
+
       // Request microphone access
       setStatus('listening')
       const stream = await getMicrophoneStream(24000)
@@ -356,6 +368,13 @@ export function useVoiceSession(options: VoiceSessionOptions = {}) {
       audioBufferQueueRef.current.clear()
     }
 
+    // Stop output level polling
+    if (outputLevelRafRef.current) {
+      cancelAnimationFrame(outputLevelRafRef.current)
+      outputLevelRafRef.current = null
+    }
+    outputAudioLevelRef.current = 0
+
     // Close WebSocket
     if (wsRef.current) {
       wsRef.current.close()
@@ -417,6 +436,10 @@ export function useVoiceSession(options: VoiceSessionOptions = {}) {
         audioBufferQueueRef.current.close()
       }
 
+      if (outputLevelRafRef.current) {
+        cancelAnimationFrame(outputLevelRafRef.current)
+      }
+
       if (wsRef.current) {
         wsRef.current.close()
       }
@@ -431,6 +454,7 @@ export function useVoiceSession(options: VoiceSessionOptions = {}) {
     // State
     status,
     audioLevelRef,
+    outputAudioLevelRef,
     isConnected,
     error,
     interimTranscript,
