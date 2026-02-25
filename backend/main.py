@@ -29,23 +29,9 @@ from storage import (
     ScenarioShareRecord,
 )
 
-# Azure AI Agents imports
-from azure.identity import DefaultAzureCredential
-from azure.ai.agents import AgentsClient
-from azure.ai.agents.models import (
-  AgentEventHandler,
-  FunctionTool,
-  ListSortOrder,
-  MessageDeltaChunk,
-  RequiredFunctionToolCall,
-  RunStep,
-  RunStepDeltaChunk,
-  SubmitToolOutputsAction,
-  ThreadMessage,
-  ThreadRun,
-  ToolOutput,
-  CodeInterpreterTool
-)
+# Azure OpenAI Assistants SDK imports
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+from openai import AzureOpenAI
 
 # Azure AI Evaluation imports - handle optional dependency
 try:
@@ -75,9 +61,10 @@ except ImportError:
 load_dotenv()
 
 # Configuration
-project_endpoint = os.environ.get("PROJECT_ENDPOINT", "")
+azure_openai_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT", "")
 model_deployment_name = os.environ.get("MODEL_DEPLOYMENT_NAME", "gpt-4")
-agent_name = "sage-retirement-agent"
+assistant_name = "sage-retirement-agent"
+azure_api_version = os.environ.get("AZURE_API_VERSION", "2025-01-01-preview")
 
 # Evaluation Configuration
 ENABLE_EVALUATIONS = True  # Enable for agent evaluation feature
@@ -85,12 +72,19 @@ ENABLE_EVALUATIONS = True  # Enable for agent evaluation feature
 # Data directory path
 DATA_DIR = Path(__file__).parent / "data"
 
-# Initialize Azure AI client
-credential = DefaultAzureCredential() if project_endpoint else None
-agents_client = AgentsClient(
-  endpoint=project_endpoint,
-  credential=credential,
-) if project_endpoint else None
+# Initialize Azure OpenAI client (Assistants API)
+if azure_openai_endpoint:
+    _credential = DefaultAzureCredential()
+    _token_provider = get_bearer_token_provider(
+        _credential, "https://cognitiveservices.azure.com/.default"
+    )
+    openai_client = AzureOpenAI(
+        azure_endpoint=azure_openai_endpoint,
+        api_version=azure_api_version,
+        azure_ad_token_provider=_token_provider,
+    )
+else:
+    openai_client = None
 
 # Load data from JSON files
 def load_user_profiles():
@@ -479,158 +473,137 @@ Each cashflow object must have ONLY "year" and "end_assets" fields - no other fi
 
 # Thread Management
 class ThreadManager:
-  def __init__(self, agents_client: AgentsClient):
-      self.agents_client = agents_client
+  def __init__(self, client: AzureOpenAI):
+      self.client = client
       self.threads = {}
   
   def get_or_create_thread(self, session_id: str) -> str:
       if session_id not in self.threads:
-          thread = self.agents_client.threads.create()
+          thread = self.client.beta.threads.create()
           self.threads[session_id] = thread.id
       return self.threads[session_id]
 
-# Streaming Event Handler
-class StreamingRetirementEventHandler(AgentEventHandler):
-  def __init__(self, functions: FunctionTool):
-      super().__init__()
-      self.functions = functions
-      self._accumulated_text = ""
-      self.status_queue = asyncio.Queue()
-      self.current_status = "Starting analysis..."
-      self.is_complete = False
-      self.run_id = None  # Capture run ID for evaluations
+# ─── Tool definitions for the OpenAI Assistants API ──────────────────────────
+ASSISTANT_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_product_catalogue",
+            "description": "Query investment product catalogue by risk level.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "risk": {
+                        "type": "string",
+                        "description": "Risk level: low, medium, or high",
+                        "enum": ["low", "medium", "high"]
+                    }
+                },
+                "required": []
+            }
+        }
+    },
+    {"type": "code_interpreter"},
+]
 
-  async def emit_status(self, status: str):
-      """Emit a status update"""
-      await self.status_queue.put({
-          "type": "status",
-          "data": {"status": status},
-          "timestamp": time.time()
-      })
 
-  def on_message_delta(self, delta: MessageDeltaChunk) -> None:
-      if delta.delta.content:
-          for chunk in delta.delta.content:
-              partial_text = chunk.text.get("value", "")
-              self._accumulated_text += partial_text
-              # Don't stream JSON content character by character
-              # Just accumulate it for final processing
+def _handle_tool_calls(tool_calls) -> list:
+    """Process tool calls and return tool outputs list (dicts)."""
+    outputs = []
+    for tc in tool_calls:
+        if tc.function.name == "get_product_catalogue":
+            args = json.loads(tc.function.arguments) if tc.function.arguments else {}
+            result = get_product_catalogue(args.get("risk", "medium"))
+            outputs.append({"tool_call_id": tc.id, "output": result})
+        else:
+            outputs.append({"tool_call_id": tc.id, "output": "{}"})
+    return outputs
 
-  def on_thread_run(self, run: ThreadRun) -> None:
-      # Capture run ID for evaluations
-      if not self.run_id:
-          self.run_id = run.id
-          
-      if run.status == "in_progress":
-          asyncio.create_task(self.emit_status("Analyzing your financial situation..."))
-      elif run.status == "requires_action":
-          asyncio.create_task(self.emit_status("Fetching investment data..."))
-      elif run.status == "completed":
-          asyncio.create_task(self.emit_status("Generating personalized recommendations..."))
-      elif run.status == "failed":
-          asyncio.create_task(self.emit_status(f"Analysis failed: {run.last_error}"))
 
-      if run.status == "requires_action" and isinstance(run.required_action, SubmitToolOutputsAction):
-          tool_calls = run.required_action.submit_tool_outputs.tool_calls
-          tool_outputs = []
-          
-          for tool_call in tool_calls:
-              if tool_call.function.name == "get_product_catalogue":
-                  asyncio.create_task(self.emit_status("Looking up investment products..."))
-                  args = json.loads(tool_call.function.arguments) if tool_call.function.arguments else {}
-                  risk = args.get("risk", "medium")
-                  result = get_product_catalogue(risk)
-                  
-                  tool_outputs.append(ToolOutput(
-                      tool_call_id=tool_call.id,
-                      output=result
-                  ))
+def _run_assistant_sync(thread_id: str, assistant_id: str) -> str:
+    """Run assistant on a thread, handle tool calls, return accumulated text.
+    Works for all non-streaming endpoints."""
+    run = openai_client.beta.threads.runs.create_and_poll(
+        thread_id=thread_id,
+        assistant_id=assistant_id,
+    )
 
-          if tool_outputs:
-              agents_client.runs.submit_tool_outputs_stream(
-                  thread_id=run.thread_id,
-                  run_id=run.id,
-                  tool_outputs=tool_outputs,
-                  event_handler=self
-              )
+    # Handle tool call loop
+    while run.status == "requires_action":
+        tool_outputs = _handle_tool_calls(
+            run.required_action.submit_tool_outputs.tool_calls
+        )
+        run = openai_client.beta.threads.runs.submit_tool_outputs_and_poll(
+            thread_id=thread_id,
+            run_id=run.id,
+            tool_outputs=tool_outputs,
+        )
 
-  def on_run_step(self, step: RunStep) -> None:
-      step_type = step.type
-      step_status = step.status
-      
-      if step_type == "tool_calls" and step_status == "in_progress":
-          asyncio.create_task(self.emit_status("Calculating retirement projections..."))
-      elif step_type == "message_creation" and step_status == "in_progress":
-          asyncio.create_task(self.emit_status("Finalizing your personalized plan..."))
-      elif step_type == "message_creation" and step_status == "completed":
-          asyncio.create_task(self.emit_status("Analysis complete - preparing results..."))
+    if run.status != "completed":
+        raise RuntimeError(f"Run ended with status: {run.status} - {getattr(run, 'last_error', '')}")
 
-  def on_done(self) -> None:
-      self.is_complete = True
-      asyncio.create_task(self.emit_status("Finalizing analysis..."))
+    # Retrieve the assistant's response
+    messages = openai_client.beta.threads.messages.list(
+        thread_id=thread_id, order="desc", limit=1
+    )
+    if messages.data and messages.data[0].content:
+        return messages.data[0].content[0].text.value
+    return ""
 
 # Initialize components
-user_functions = {get_product_catalogue}
-thread_manager = ThreadManager(agents_client) if agents_client else None
+thread_manager = ThreadManager(openai_client) if openai_client else None
 
-# Agent setup
-def setup_agent():
-  """Initialize or find the retirement planning agent"""
-  if agents_client is None:
-      print("PROJECT_ENDPOINT not configured - skipping agent initialization")
-      return None, None
+# Assistant setup
+def setup_assistant():
+  """Initialize or find the retirement planning assistant via OpenAI Assistants API"""
+  if openai_client is None:
+      print("AZURE_OPENAI_ENDPOINT not configured - skipping assistant initialization")
+      return None
 
-  functions = FunctionTool(user_functions)
-  tools = functions.definitions
-
+  # Try to find existing assistant
   try:
-      code_interpreter = CodeInterpreterTool()
-      tools.extend(code_interpreter.definitions)
-  except Exception as e:
-      print(f"CodeInterpreter not available: {e}")
-
-  # Try to find existing agent
-  try:
-      agents = agents_client.list_agents()
-      for agent in agents:
-          if agent.name == agent_name:
-              return agents_client.update_agent(
-                  agent_id=agent.id,
+      assistants = openai_client.beta.assistants.list(limit=100)
+      for a in assistants.data:
+          if a.name == assistant_name:
+              print(f"Found existing assistant '{assistant_name}' (id={a.id}), updating...")
+              updated = openai_client.beta.assistants.update(
+                  assistant_id=a.id,
                   model=model_deployment_name,
                   instructions=SYSTEM_INSTRUCTIONS,
-                  tools=tools,
-              ), functions
+                  tools=ASSISTANT_TOOLS,
+              )
+              return updated
   except Exception as e:
-      print(f"Could not list agents: {e}")
+      print(f"Could not list assistants: {e}")
 
-  # Create new agent
+  # Create new assistant
   try:
-      agent = agents_client.create_agent(
+      assistant = openai_client.beta.assistants.create(
           model=model_deployment_name,
-          name=agent_name,
+          name=assistant_name,
           instructions=SYSTEM_INSTRUCTIONS,
-          tools=tools,
+          tools=ASSISTANT_TOOLS,
       )
-      return agent, functions
+      print(f"Created assistant '{assistant_name}' (id={assistant.id})")
+      return assistant
   except Exception as e:
-      print(f"FATAL: Could not create agent: {e}")
+      print(f"FATAL: Could not create assistant: {e}")
       print("Backend will start in limited mode - voice endpoints available, chat disabled")
-      return None, functions
+      return None
 
-# Initialize agent
+# Initialize assistant
 try:
-    agent, functions = setup_agent()
+    agent = setup_assistant()
     if agent is None:
-        if not project_endpoint:
-            print("[INFO] Running in limited mode - PROJECT_ENDPOINT not set")
+        if not azure_openai_endpoint:
+            print("[INFO] Running in limited mode - AZURE_OPENAI_ENDPOINT not set")
         else:
-            print("[WARNING] Agent initialization failed. Chat endpoints will not work.")
+            print("[WARNING] Assistant initialization failed. Chat endpoints will not work.")
         print("[OK] Voice and data endpoints are available")
 except Exception as e:
-    print(f"[ERROR] FATAL ERROR during agent setup: {e}")
+    print(f"[ERROR] FATAL ERROR during assistant setup: {e}")
     print("Backend starting in emergency mode - only voice endpoints available")
     agent = None
-    functions = None
 
 # Evaluation Configuration
 def setup_evaluators():
@@ -659,7 +632,10 @@ def setup_evaluators():
         task_adherence = TaskAdherenceEvaluator(model_config=model_config, threshold=3)
         
         # Initialize converter for Azure AI agent messages
-        converter = AIAgentConverter(agents_client)
+        # NOTE: AIAgentConverter is designed for azure.ai.agents SDK.
+        # Since we migrated to the openai SDK, the converter may not work.
+        # Pass None for now; evaluations using the converter will gracefully degrade.
+        converter = None
         
         return {
             "intent_resolution": intent_resolution,
@@ -1116,47 +1092,17 @@ async def generate_pre_meeting_brief_endpoint(request: PreMeetingBriefRequest):
             appointment_id=request.appointment_id,
         )
 
-        thread = agents_client.threads.create()
-        agents_client.messages.create(
+        thread = openai_client.beta.threads.create()
+        openai_client.beta.threads.messages.create(
             thread_id=thread.id,
             role="user",
             content=f"SYSTEM CONTEXT:\n{system_prompt}\n\n---\n\n{user_message}",
         )
 
-        class TextHandler(AgentEventHandler):
-            def __init__(self):
-                super().__init__()
-                self.text = ""
-
-            def on_message_delta(self, delta: MessageDeltaChunk):
-                if delta.delta.content:
-                    for chunk in delta.delta.content:
-                        self.text += chunk.text.get("value", "")
-
-            def on_thread_run(self, run: ThreadRun):
-                if run.status == "requires_action" and isinstance(run.required_action, SubmitToolOutputsAction):
-                    tool_calls = run.required_action.submit_tool_outputs.tool_calls
-                    tool_outputs = []
-                    for tc in tool_calls:
-                        if tc.function.name == "get_product_catalogue":
-                            args = json.loads(tc.function.arguments) if tc.function.arguments else {}
-                            result = get_product_catalogue(args.get("risk", "medium"))
-                            tool_outputs.append(ToolOutput(tool_call_id=tc.id, output=result))
-                    if tool_outputs:
-                        agents_client.runs.submit_tool_outputs_stream(
-                            thread_id=run.thread_id, run_id=run.id,
-                            tool_outputs=tool_outputs, event_handler=self,
-                        )
-
-        handler = TextHandler()
-        with agents_client.runs.stream(
-            thread_id=thread.id, agent_id=agent.id, event_handler=handler,
-        ) as stream:
-            for _ in stream:
-                pass
+        raw = _run_assistant_sync(thread.id, agent.id)
 
         # Parse the JSON response from the LLM
-        raw = handler.text.strip()
+        raw = raw.strip()
         # Strip markdown code fences if the LLM added them despite instructions
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
@@ -1172,7 +1118,7 @@ async def generate_pre_meeting_brief_endpoint(request: PreMeetingBriefRequest):
         return brief_data
 
     except json.JSONDecodeError as e:
-        print(f"Pre-meeting brief JSON parse error: {e}\nRaw response: {handler.text[:500]}")
+        print(f"Pre-meeting brief JSON parse error: {e}\nRaw response: {raw[:500]}")
         raise HTTPException(status_code=502, detail="LLM returned invalid JSON for pre-meeting brief")
     except Exception as e:
         print(f"Pre-meeting brief error: {e}")
@@ -1268,46 +1214,16 @@ async def generate_scenario_analysis_endpoint(request: ScenarioAnalysisRequest):
             client_summaries=client_summaries,
         )
 
-        thread = agents_client.threads.create()
-        agents_client.messages.create(
+        thread = openai_client.beta.threads.create()
+        openai_client.beta.threads.messages.create(
             thread_id=thread.id,
             role="user",
             content=f"SYSTEM CONTEXT:\n{system_prompt}\n\n---\n\n{user_message}",
         )
 
-        class TextHandler(AgentEventHandler):
-            def __init__(self):
-                super().__init__()
-                self.text = ""
+        raw = _run_assistant_sync(thread.id, agent.id)
 
-            def on_message_delta(self, delta: MessageDeltaChunk):
-                if delta.delta.content:
-                    for chunk in delta.delta.content:
-                        self.text += chunk.text.get("value", "")
-
-            def on_thread_run(self, run: ThreadRun):
-                if run.status == "requires_action" and isinstance(run.required_action, SubmitToolOutputsAction):
-                    tool_calls = run.required_action.submit_tool_outputs.tool_calls
-                    tool_outputs = []
-                    for tc in tool_calls:
-                        if tc.function.name == "get_product_catalogue":
-                            args = json.loads(tc.function.arguments) if tc.function.arguments else {}
-                            result = get_product_catalogue(args.get("risk", "medium"))
-                            tool_outputs.append(ToolOutput(tool_call_id=tc.id, output=result))
-                    if tool_outputs:
-                        agents_client.runs.submit_tool_outputs_stream(
-                            thread_id=run.thread_id, run_id=run.id,
-                            tool_outputs=tool_outputs, event_handler=self,
-                        )
-
-        handler = TextHandler()
-        with agents_client.runs.stream(
-            thread_id=thread.id, agent_id=agent.id, event_handler=handler,
-        ) as stream:
-            for _ in stream:
-                pass
-
-        raw = handler.text.strip()
+        raw = raw.strip()
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
             if raw.endswith("```"):
@@ -1318,7 +1234,7 @@ async def generate_scenario_analysis_endpoint(request: ScenarioAnalysisRequest):
         return analysis_data
 
     except json.JSONDecodeError as e:
-        print(f"Scenario analysis JSON parse error: {e}\nRaw response: {handler.text[:500]}")
+        print(f"Scenario analysis JSON parse error: {e}\nRaw response: {raw[:500]}")
         raise HTTPException(status_code=502, detail="LLM returned invalid JSON for scenario analysis")
     except Exception as e:
         print(f"Scenario analysis error: {e}")
@@ -1378,49 +1294,18 @@ async def advisor_chat(request: AdvisorChatRequest):
         system_prompt = await _build_advisor_context(request.advisor_id)
 
         # Create a dedicated thread for this advisor conversation
-        thread = agents_client.threads.create()
+        thread = openai_client.beta.threads.create()
 
         # Send system context + user message
-        agents_client.messages.create(
+        openai_client.beta.threads.messages.create(
             thread_id=thread.id,
             role="user",
             content=f"SYSTEM CONTEXT:\n{system_prompt}\n\n---\n\nADVISOR QUESTION:\n{request.message}",
         )
 
-        # Run the agent and collect response
-        class TextHandler(AgentEventHandler):
-            def __init__(self):
-                super().__init__()
-                self.text = ""
+        response_text = _run_assistant_sync(thread.id, agent.id)
 
-            def on_message_delta(self, delta: MessageDeltaChunk):
-                if delta.delta.content:
-                    for chunk in delta.delta.content:
-                        self.text += chunk.text.get("value", "")
-
-            def on_thread_run(self, run: ThreadRun):
-                if run.status == "requires_action" and isinstance(run.required_action, SubmitToolOutputsAction):
-                    tool_calls = run.required_action.submit_tool_outputs.tool_calls
-                    tool_outputs = []
-                    for tc in tool_calls:
-                        if tc.function.name == "get_product_catalogue":
-                            args = json.loads(tc.function.arguments) if tc.function.arguments else {}
-                            result = get_product_catalogue(args.get("risk", "medium"))
-                            tool_outputs.append(ToolOutput(tool_call_id=tc.id, output=result))
-                    if tool_outputs:
-                        agents_client.runs.submit_tool_outputs_stream(
-                            thread_id=run.thread_id, run_id=run.id,
-                            tool_outputs=tool_outputs, event_handler=self,
-                        )
-
-        handler = TextHandler()
-        with agents_client.runs.stream(
-            thread_id=thread.id, agent_id=agent.id, event_handler=handler,
-        ) as stream:
-            for _ in stream:
-                pass
-
-        clean_text, citations = _extract_citations(handler.text)
+        clean_text, citations = _extract_citations(response_text)
         return {"response": clean_text, "citations": citations}
 
     except Exception as e:
@@ -1441,7 +1326,7 @@ async def advisor_chat_stream(request: AdvisorChatRequest):
         system_prompt = await _build_advisor_context(request.advisor_id)
 
         # Create a dedicated thread for this advisor conversation
-        thread = agents_client.threads.create()
+        thread = openai_client.beta.threads.create()
 
         # Build full message with history context
         history_text = ""
@@ -1455,7 +1340,7 @@ async def advisor_chat_stream(request: AdvisorChatRequest):
             full_message += f"CONVERSATION HISTORY:\n{history_text}\n---\n\n"
         full_message += f"ADVISOR QUESTION:\n{request.message}"
 
-        agents_client.messages.create(
+        openai_client.beta.threads.messages.create(
             thread_id=thread.id,
             role="user",
             content=full_message,
@@ -1463,60 +1348,55 @@ async def advisor_chat_stream(request: AdvisorChatRequest):
 
         async def generate():
             accumulated = ""
+            chunks_queue = asyncio.Queue()
+            done_flag = {"done": False}
 
-            class StreamHandler(AgentEventHandler):
-                def __init__(self):
-                    super().__init__()
-                    self.chunks = asyncio.Queue()
-                    self.done = False
-
-                def on_message_delta(self, delta: MessageDeltaChunk):
-                    if delta.delta.content:
-                        for chunk in delta.delta.content:
-                            text = chunk.text.get("value", "")
-                            if text:
-                                self.chunks.put_nowait(text)
-
-                def on_done(self):
-                    self.done = True
-
-                def on_thread_run(self, run: ThreadRun):
-                    if run.status == "requires_action" and isinstance(run.required_action, SubmitToolOutputsAction):
-                        tool_calls = run.required_action.submit_tool_outputs.tool_calls
-                        tool_outputs = []
-                        for tc in tool_calls:
-                            if tc.function.name == "get_product_catalogue":
-                                args = json.loads(tc.function.arguments) if tc.function.arguments else {}
-                                result = get_product_catalogue(args.get("risk", "medium"))
-                                tool_outputs.append(ToolOutput(tool_call_id=tc.id, output=result))
-                        if tool_outputs:
-                            agents_client.runs.submit_tool_outputs_stream(
-                                thread_id=run.thread_id, run_id=run.id,
-                                tool_outputs=tool_outputs, event_handler=self,
-                            )
-
-            handler = StreamHandler()
-
-            async def run_agent():
-                with agents_client.runs.stream(
-                    thread_id=thread.id, agent_id=agent.id, event_handler=handler,
-                ) as stream:
-                    for _ in stream:
-                        await asyncio.sleep(0.01)
-                handler.done = True
-
-            task = asyncio.create_task(run_agent())
-
-            while not handler.done or not handler.chunks.empty():
+            def _stream_worker():
+                """Synchronous worker: streams assistant run, queues text chunks."""
                 try:
-                    chunk = await asyncio.wait_for(handler.chunks.get(), timeout=0.1)
+                    with openai_client.beta.threads.runs.stream(
+                        thread_id=thread.id, assistant_id=agent.id,
+                    ) as stream:
+                        for event in stream:
+                            if event.event == "thread.message.delta":
+                                for block in event.data.delta.content:
+                                    if hasattr(block, "text") and block.text:
+                                        chunks_queue.put_nowait(block.text.value)
+                            elif event.event == "thread.run.requires_action":
+                                tool_outputs = _handle_tool_calls(
+                                    event.data.required_action.submit_tool_outputs.tool_calls
+                                )
+                                with openai_client.beta.threads.runs.submit_tool_outputs_stream(
+                                    thread_id=thread.id,
+                                    run_id=event.data.id,
+                                    tool_outputs=tool_outputs,
+                                ) as tool_stream:
+                                    for te in tool_stream:
+                                        if te.event == "thread.message.delta":
+                                            for block in te.data.delta.content:
+                                                if hasattr(block, "text") and block.text:
+                                                    chunks_queue.put_nowait(block.text.value)
+                except Exception as exc:
+                    chunks_queue.put_nowait(None)  # signal error
+                    print(f"Advisor stream error: {exc}")
+                finally:
+                    done_flag["done"] = True
+
+            task = asyncio.get_event_loop().run_in_executor(None, _stream_worker)
+
+            while not done_flag["done"] or not chunks_queue.empty():
+                try:
+                    chunk = await asyncio.wait_for(chunks_queue.get(), timeout=0.1)
+                    if chunk is None:
+                        break
                     accumulated += chunk
                     yield f"data: {json.dumps({'type': 'content', 'data': chunk})}\n\n"
                 except asyncio.TimeoutError:
-                    if task.done():
-                        # Drain remaining chunks
-                        while not handler.chunks.empty():
-                            chunk = handler.chunks.get_nowait()
+                    if done_flag["done"]:
+                        while not chunks_queue.empty():
+                            chunk = chunks_queue.get_nowait()
+                            if chunk is None:
+                                break
                             accumulated += chunk
                             yield f"data: {json.dumps({'type': 'content', 'data': chunk})}\n\n"
                         break
@@ -1577,51 +1457,94 @@ async def chat_stream(request: ChatRequest):
       }
       
       # Send message to thread
-      agents_client.messages.create(
+      openai_client.beta.threads.messages.create(
           thread_id=thread_id,
           role="user",
           content=json.dumps(payload)
       )
       
       async def generate_stream():
-          event_handler = StreamingRetirementEventHandler(functions)
           response_text = ""
           analysis_data = None
-          
-          # Start the streaming run
-          with agents_client.runs.stream(
-              thread_id=thread_id,
-              agent_id=agent.id,
-              event_handler=event_handler
-          ) as stream:
-              
-              # Process events in a separate task
-              async def process_events():
-                  for event in stream:
-                      await asyncio.sleep(0.01)  # Small delay to allow queue processing
-              
-              # Start processing events
-              event_task = asyncio.create_task(process_events())
-              
-              # Stream status updates only (no content streaming)
-              while not event_handler.is_complete:
-                  try:
-                      # Check for status updates
-                      status_update = await asyncio.wait_for(
-                          event_handler.status_queue.get(), timeout=0.1
-                      )
-                      yield f"data: {json.dumps(status_update)}\n\n"
-                  except asyncio.TimeoutError:
-                      pass
-                  
-                  if event_task.done():
-                      break
-              
-              # Wait for event processing to complete
-              await event_task
-          
-          # Process the complete response
-          response_text = event_handler._accumulated_text
+          status_queue = asyncio.Queue()
+          run_id_holder = {"run_id": None}
+
+          async def _emit(status: str):
+              await status_queue.put({
+                  "type": "status",
+                  "data": {"status": status},
+                  "timestamp": time.time()
+              })
+
+          def _stream_worker():
+              """Synchronous worker that runs the assistant stream and queues status updates."""
+              accumulated = ""
+              try:
+                  asyncio.get_event_loop()  # Ensure loop ref for put_nowait
+              except RuntimeError:
+                  pass
+
+              try:
+                  status_queue.put_nowait({"type": "status", "data": {"status": "Analyzing your financial situation..."}, "timestamp": time.time()})
+
+                  with openai_client.beta.threads.runs.stream(
+                      thread_id=thread_id,
+                      assistant_id=agent.id,
+                  ) as stream:
+                      for event in stream:
+                          if event.event == "thread.run.created":
+                              run_id_holder["run_id"] = event.data.id
+                          elif event.event == "thread.message.delta":
+                              for block in event.data.delta.content:
+                                  if hasattr(block, "text") and block.text:
+                                      accumulated += block.text.value
+                          elif event.event == "thread.run.requires_action":
+                              status_queue.put_nowait({"type": "status", "data": {"status": "Fetching investment data..."}, "timestamp": time.time()})
+                              tool_outputs = _handle_tool_calls(
+                                  event.data.required_action.submit_tool_outputs.tool_calls
+                              )
+                              status_queue.put_nowait({"type": "status", "data": {"status": "Looking up investment products..."}, "timestamp": time.time()})
+                              with openai_client.beta.threads.runs.submit_tool_outputs_stream(
+                                  thread_id=thread_id,
+                                  run_id=event.data.id,
+                                  tool_outputs=tool_outputs,
+                              ) as tool_stream:
+                                  for te in tool_stream:
+                                      if te.event == "thread.message.delta":
+                                          for block in te.data.delta.content:
+                                              if hasattr(block, "text") and block.text:
+                                                  accumulated += block.text.value
+                                      elif te.event == "thread.run.step.created":
+                                          status_queue.put_nowait({"type": "status", "data": {"status": "Calculating retirement projections..."}, "timestamp": time.time()})
+                          elif event.event == "thread.run.step.created":
+                              status_queue.put_nowait({"type": "status", "data": {"status": "Calculating retirement projections..."}, "timestamp": time.time()})
+                          elif event.event == "thread.run.completed":
+                              status_queue.put_nowait({"type": "status", "data": {"status": "Generating personalized recommendations..."}, "timestamp": time.time()})
+
+              except Exception as exc:
+                  print(f"Chat stream error: {exc}")
+                  status_queue.put_nowait({"type": "status", "data": {"status": f"Analysis failed: {exc}"}, "timestamp": time.time()})
+              return accumulated
+
+          # Run the blocking stream in a thread pool
+          loop = asyncio.get_event_loop()
+          stream_future = loop.run_in_executor(None, _stream_worker)
+
+          # Yield status events while the stream is running
+          while not stream_future.done():
+              try:
+                  status_update = await asyncio.wait_for(status_queue.get(), timeout=0.1)
+                  yield f"data: {json.dumps(status_update)}\n\n"
+              except asyncio.TimeoutError:
+                  pass
+
+          # Get accumulated response text
+          response_text = await stream_future
+
+          # Drain any remaining status events
+          while not status_queue.empty():
+              status_update = status_queue.get_nowait()
+              yield f"data: {json.dumps(status_update)}\n\n"
           
           # Send status update for JSON parsing
           parsing_status = {
@@ -1741,8 +1664,8 @@ async def chat_stream(request: ChatRequest):
                   "status": "completed" if analysis_data else "partial",
                   "evaluation_context": {
                       "thread_id": thread_id,
-                      "run_id": event_handler.run_id
-                  } if event_handler.run_id else None
+                      "run_id": run_id_holder.get("run_id")
+                  } if run_id_holder.get("run_id") else None
               },
               "timestamp": time.time()
           }
@@ -1782,64 +1705,15 @@ async def chat_endpoint(request: ChatRequest):
       }
       
       # Send message to thread
-      agents_client.messages.create(
+      openai_client.beta.threads.messages.create(
           thread_id=thread_id,
           role="user",
           content=json.dumps(payload)
       )
       
-      # Run the agent
-      response_text = ""
+      # Run the assistant
       analysis_data = None
-      
-      class ResponseHandler(AgentEventHandler):
-          def __init__(self):
-              super().__init__()
-              self.response = ""
-          
-          def on_message_delta(self, delta: MessageDeltaChunk):
-              if delta.delta.content:
-                  for chunk in delta.delta.content:
-                      self.response += chunk.text.get("value", "")
-          
-          def on_thread_run(self, run: ThreadRun):
-              if run.status == "completed":
-                  pass  # Evaluation trigger removed for testing
-              
-              if run.status == "requires_action" and isinstance(run.required_action, SubmitToolOutputsAction):
-                  tool_calls = run.required_action.submit_tool_outputs.tool_calls
-                  tool_outputs = []
-                  
-                  for tool_call in tool_calls:
-                      if tool_call.function.name == "get_product_catalogue":
-                          args = json.loads(tool_call.function.arguments) if tool_call.function.arguments else {}
-                          risk = args.get("risk", "medium")
-                          result = get_product_catalogue(risk)
-                          
-                          tool_outputs.append(ToolOutput(
-                              tool_call_id=tool_call.id,
-                              output=result
-                          ))
-                  
-                  if tool_outputs:
-                      agents_client.runs.submit_tool_outputs_stream(
-                          thread_id=run.thread_id,
-                          run_id=run.id,
-                          tool_outputs=tool_outputs,
-                          event_handler=self
-                      )
-      
-      handler = ResponseHandler()
-      
-      with agents_client.runs.stream(
-          thread_id=thread_id,
-          agent_id=agent.id,
-          event_handler=handler
-      ) as stream:
-          for event in stream:
-              pass
-      
-      response_text = handler.response
+      response_text = _run_assistant_sync(thread_id, agent.id)
       
       # Try to parse JSON analysis from response
       try:
@@ -2076,39 +1950,15 @@ async def project_scenario(request: ScenarioProjectionRequest):
         )
         
         # Create a thread and run the projection
-        thread = agents_client.threads.create()
+        thread = openai_client.beta.threads.create()
         
-        agents_client.messages.create(
+        openai_client.beta.threads.messages.create(
             thread_id=thread.id,
             role="user",
             content=formatted_prompt
         )
         
-        # Run with streaming to capture response
-        class ProjectionHandler(AgentEventHandler):
-            def __init__(self):
-                super().__init__()
-                self.response = ""
-            
-            def on_message_delta(self, delta: MessageDeltaChunk):
-                if delta.delta.content:
-                    for chunk in delta.delta.content:
-                        self.response += chunk.text.get("value", "")
-            
-            def on_thread_run(self, run: ThreadRun):
-                pass  # No tool calls needed for projections
-        
-        handler = ProjectionHandler()
-        
-        with agents_client.runs.stream(
-            thread_id=thread.id,
-            agent_id=agent.id,
-            event_handler=handler
-        ) as stream:
-            for event in stream:
-                pass
-        
-        response_text = handler.response.strip()
+        response_text = _run_assistant_sync(thread.id, agent.id).strip()
         
         # Parse JSON from response
         json_start = response_text.find('{')
