@@ -31,6 +31,9 @@ import {
   getApiMode,
   type ConversationSummary,
 } from "@/lib/api"
+import { useVoiceSession } from "@/components/frontend/shared/voice/useVoiceSession"
+import FullCanvasVoiceView from "@/components/frontend/shared/voice/FullCanvasVoiceView"
+import type { CommunicationMode } from "@/components/frontend/shared/SageChatPane"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -39,6 +42,7 @@ interface AdvisorChatViewProps {
   clients: ClientProfile[]
   isMockMode?: boolean
   embedded?: boolean
+  communicationMode?: CommunicationMode
 }
 
 interface ChatMessage {
@@ -500,6 +504,7 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
   clients,
   isMockMode = true,
   embedded = false,
+  communicationMode = "chat",
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState("")
@@ -513,12 +518,45 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const msgCounter = useRef(0)
-  
+
+  // Voice session hook
+  const voiceSession = useVoiceSession({
+    conversationId: currentConversationId || undefined,
+    userProfile: advisor, // Pass advisor as profile for context
+    onTranscript: (text, isFinal, role) => {
+      if (isFinal && role === "user") {
+        // Add user voice message to chat
+        const userMsg: ChatMessage = {
+          id: `msg-${Date.now()}-${msgCounter.current++}`,
+          role: "user",
+          content: text,
+          timestamp: new Date().toISOString(),
+        }
+        setMessages((prev) => [...prev, userMsg])
+      } else if (isFinal && role === "assistant") {
+        // Add assistant voice message to chat
+        const assistantMsg: ChatMessage = {
+          id: `msg-${Date.now()}-${msgCounter.current++}`,
+          role: "assistant",
+          content: text,
+          timestamp: new Date().toISOString(),
+        }
+        setMessages((prev) => [...prev, assistantMsg])
+      }
+    },
+    onTurnEnd: (userTranscript, assistantTranscript) => {
+      console.log("Voice turn complete")
+    },
+    onError: (error) => {
+      console.error("Voice error:", error)
+    },
+  })
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
   
-  useEffect(() => { scrollToBottom() }, [messages])
+  useEffect(() => { scrollToBottom() }, [messages, voiceSession.interimTranscript])
 
   // ── Conversation history ──
 
@@ -817,8 +855,25 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
         </div>
       )}
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4">
+      {/* Voice Mode — full canvas immersive view */}
+      {communicationMode === "voice" && (
+        <FullCanvasVoiceView
+          variant="advisor"
+          voiceStatus={voiceSession.status}
+          inputLevelRef={voiceSession.audioLevelRef}
+          outputLevelRef={voiceSession.outputAudioLevelRef}
+          interimTranscript={voiceSession.interimTranscript}
+          interimRole={voiceSession.interimRole}
+          onToggleSession={voiceSession.toggleSession}
+          error={voiceSession.error}
+        />
+      )}
+
+      {/* Chat Mode — messages + text input */}
+      {communicationMode === "chat" && (
+        <>
+          {/* Messages Area */}
+          <div className="flex-1 overflow-y-auto p-4">
         {messages.length === 0 ? (
           <div className="max-w-2xl mx-auto">
             <div className="text-center mb-8">
@@ -889,6 +944,7 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
                 </div>
               </div>
             )}
+
             <div ref={messagesEndRef} />
           </div>
         )}
@@ -898,7 +954,7 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
       <div className="flex-shrink-0 p-4 bg-white border-t">
         <div className="max-w-3xl mx-auto">
           <div className="flex gap-3">
-            <div className="flex-1 relative">
+            <div className="flex-1 relative animate-in fade-in duration-200">
               <textarea
                 ref={inputRef}
                 value={inputValue}
@@ -907,6 +963,7 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
                 placeholder="Ask about regulations, client strategies, or planning scenarios..."
                 className="w-full px-4 py-3 pr-12 border rounded-xl resize-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-300"
                 rows={1}
+                disabled={isLoading}
               />
               <button
                 onClick={() => handleSend()}
@@ -924,6 +981,8 @@ export const AdvisorChatView: React.FC<AdvisorChatViewProps> = ({
           </div>
         </div>
       </div>
+        </>
+      )}
     </div>
   )
 }

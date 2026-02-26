@@ -14,6 +14,9 @@
 ### 🔮 AI-Powered Scenario Projections
 Ask natural language questions like *"What if I maximize my 401(k) contributions?"* or *"How would a market crash affect my retirement?"* and get instant, personalized projections powered by Azure AI Agents.
 
+### 🎙️ Voice Mode
+Speak with your AI retirement planning assistant using Azure Voice Live (gpt-4o-realtime). Natural, real-time voice conversations with audio responses. Available in both Client and Advisor portals.
+
 ### 📊 Real-Time Portfolio Analysis
 - View projected account balances across 401(k), Roth IRA, and brokerage accounts
 - See holding-level projections with allocation changes
@@ -92,14 +95,22 @@ uv sync
 
 ### 2. Configure Environment
 
+**Frontend** (`.env.local`):
 ```bash
-# Copy example env file
-cp .env.example .env
-
-# For live mode, add your Azure credentials:
-# PROJECT_ENDPOINT=https://your-ai-foundry.services.ai.azure.com/...
-# AZURE_OPENAI_KEY=your-key
+cp .env.example .env.local
+# Edit .env.local with your backend URL
 ```
+
+**Backend** (`backend/.env`):
+```bash
+cd backend
+cp .env.example .env
+# For local dev with Azure CLI:
+az login
+# Or add your Azure credentials for production
+```
+
+See [Environment Configuration Guide](./docs/environment-configuration.md) for detailed setup.
 
 ### 3. Run the Application
 
@@ -128,6 +139,20 @@ Click the **"What If"** button to open the scenario projection overlay and explo
 
 ### Scenario Projection Results
 See projected account balances, percentage changes, and AI-generated insights including risks and opportunities.
+
+---
+
+## 📚 Documentation
+
+Comprehensive documentation is available in the [docs folder](./docs/):
+
+- **[📖 Documentation Index](./docs/README.md)** - Start here for all documentation
+- **[⚡ Quick Start Guide](./docs/quickstart.md)** - Detailed setup instructions
+- **[🎙️ Voice Mode Setup](./docs/voice/setup.md)** - Configure voice chat with Azure Voice Live
+- **[🔐 Voice Authentication](./docs/voice/authentication.md)** - AAD authentication guide
+- **[⚙️ Environment Config](./docs/environment-configuration.md)** - Complete environment variable reference
+- **[🚀 Deployment Guide](./docs/deployment.md)** - Production deployment
+- **[🔧 Backend README](./docs/backend/README.md)** - Backend-specific documentation
 
 ---
 

@@ -44,6 +44,7 @@ import { AdvisorChatView } from "@/components/frontend/advisor/AdvisorChatView"
 import { AdvisorScenarioView } from "@/components/frontend/advisor/AdvisorScenarioView"
 import { AdminDashboard } from "@/components/frontend/admin/AdminDashboard"
 import { SageChatPane, SageFloatingButton } from "@/components/frontend/shared/SageChatPane"
+import type { CommunicationMode } from "@/components/frontend/shared/SageChatPane"
 import { getMockClientsForAdvisor } from "@/lib/advisorApi"
 import { getPortfolioData } from "@/lib/mockPortfolio"
 
@@ -107,6 +108,7 @@ export default function RetirementPlanningApp() {
   const [showProfileBubble, setShowProfileBubble] = useState(false)
   const [availableProfiles, setAvailableProfiles] = useState<UserProfile[]>([])
   const [isChatPaneOpen, setIsChatPaneOpen] = useState(false)
+  const [communicationMode, setCommunicationMode] = useState<CommunicationMode>("chat")
 
   // Get current nav items based on persona
   const navItems = currentPersona === "client" 
@@ -137,6 +139,7 @@ export default function RetirementPlanningApp() {
   const handlePersonaChange = (persona: UserRole) => {
     setCurrentPersona(persona)
     setIsChatPaneOpen(false)
+    setCommunicationMode("chat")
     // Reset to default view for each persona
     if (persona === "client") {
       setClientView("dashboard")
@@ -651,8 +654,13 @@ export default function RetirementPlanningApp() {
 
       <SageChatPane
         isOpen={isChatPaneOpen}
-        onClose={() => setIsChatPaneOpen(false)}
+        onClose={() => {
+          setIsChatPaneOpen(false)
+          setCommunicationMode("chat")
+        }}
         variant={currentPersona === "advisor" ? "advisor" : "client"}
+        communicationMode={communicationMode}
+        onCommunicationModeChange={setCommunicationMode}
       >
         {currentPersona === "advisor" ? (
           <AdvisorChatView
@@ -660,13 +668,18 @@ export default function RetirementPlanningApp() {
             clients={getMockClientsForAdvisor(currentAdvisor.id)}
             isMockMode={isMockMode}
             embedded
+            communicationMode={communicationMode}
           />
         ) : (
           <PlanningView
             selectedProfile={selectedProfile}
             isMockMode={isMockMode}
-            onBack={() => setIsChatPaneOpen(false)}
+            onBack={() => {
+              setIsChatPaneOpen(false)
+              setCommunicationMode("chat")
+            }}
             embedded
+            communicationMode={communicationMode}
           />
         )}
       </SageChatPane>
