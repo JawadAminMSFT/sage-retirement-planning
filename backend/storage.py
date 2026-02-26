@@ -324,19 +324,27 @@ class LocalStorage(StorageBackend):
 
 class AzureBlobStorage(StorageBackend):
     """Azure Blob Storage backend."""
-    
-    def __init__(self, connection_string: str = None, container_name: str = "sage-user-data"):
+
+    def __init__(self, account_url: str = None, connection_string: str = None, container_name: str = "sage-user-data"):
+        self.account_url = account_url or os.environ.get("AZURE_STORAGE_ACCOUNT_URL")
         self.connection_string = connection_string or os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
         self.container_name = container_name
         self._client = None
         self._container = None
-    
+
     def _get_client(self):
-        """Lazy initialization of blob client."""
+        """Lazy initialization of blob client. Prefers DefaultAzureCredential over connection string."""
         if self._client is None:
             try:
                 from azure.storage.blob import BlobServiceClient
-                self._client = BlobServiceClient.from_connection_string(self.connection_string)
+                if self.account_url:
+                    from azure.identity import DefaultAzureCredential
+                    credential = DefaultAzureCredential()
+                    self._client = BlobServiceClient(account_url=self.account_url, credential=credential)
+                elif self.connection_string:
+                    self._client = BlobServiceClient.from_connection_string(self.connection_string)
+                else:
+                    raise ValueError("Either AZURE_STORAGE_ACCOUNT_URL or AZURE_STORAGE_CONNECTION_STRING must be set")
                 self._container = self._client.get_container_client(self.container_name)
                 # Create container if it doesn't exist
                 try:
@@ -522,11 +530,12 @@ def get_storage_backend() -> StorageBackend:
     backend_type = os.environ.get("STORAGE_BACKEND", "local").lower()
     
     if backend_type == "azure":
+        account_url = os.environ.get("AZURE_STORAGE_ACCOUNT_URL")
         connection_string = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
-        if not connection_string:
-            print("Warning: AZURE_STORAGE_CONNECTION_STRING not set, falling back to local storage")
+        if not account_url and not connection_string:
+            print("Warning: Neither AZURE_STORAGE_ACCOUNT_URL nor AZURE_STORAGE_CONNECTION_STRING set, falling back to local storage")
             return LocalStorage()
-        return AzureBlobStorage(connection_string)
+        return AzureBlobStorage(account_url=account_url, connection_string=connection_string)
     
     return LocalStorage()
 
