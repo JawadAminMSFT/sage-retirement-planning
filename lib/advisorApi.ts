@@ -452,6 +452,8 @@ export async function streamAdvisorChat(
   
   const decoder = new TextDecoder()
   let fullContent = ''
+  let latestCitations: AdvisorChatCitation[] = []
+  let completedViaEvent = false
   
   while (true) {
     const { done, value } = await reader.read()
@@ -469,9 +471,11 @@ export async function streamAdvisorChat(
             onUpdate(fullContent, false)
           } else if (data.type === 'complete') {
             const citations: AdvisorChatCitation[] = data.data?.citations || []
+            latestCitations = citations
             if (data.data?.response) {
               fullContent = data.data.response
             }
+            completedViaEvent = true
             onUpdate(fullContent, true, citations)
           }
         } catch (e) {
@@ -481,7 +485,9 @@ export async function streamAdvisorChat(
     }
   }
   
-  onUpdate(fullContent, true, [])
+  if (!completedViaEvent) {
+    onUpdate(fullContent, true, latestCitations)
+  }
 }
 
 /**
@@ -539,6 +545,7 @@ A professional email to send to the client summarizing the meeting and next step
       advisor_id: advisorId,
       context: { client_id: clientId },
       history: [],
+      skip_mcp: true,
     }),
   })
   
@@ -581,6 +588,7 @@ Suggest the top 3-5 actionable items for today based on my escalation queue, upc
 Identify any proactive opportunities (e.g., clients approaching milestones, rebalancing needs, tax planning windows).`,
       advisor_id: advisorId,
       history: [],
+      skip_mcp: true,
     }),
   })
   
@@ -627,6 +635,7 @@ Keep it concise and actionable — this appears in a summary card on the client 
       advisor_id: advisorId,
       context: { client_id: clientId },
       history: [],
+      skip_mcp: true,
     }),
   })
 
@@ -910,4 +919,113 @@ export const MOCK_CLIENTS: ClientProfile[] = [
 // Helper to get mock clients for an advisor
 export function getMockClientsForAdvisor(advisorId: string): ClientProfile[] {
   return MOCK_CLIENTS.filter(c => c.advisor_id === advisorId)
+}
+
+
+// ─── WorkIQ MCP Integration ─────────────────────────────────────────────────
+
+export interface WorkIQContext {
+  workiq_enabled: boolean
+  calendar_today: string | null
+  sage_meetings: string | null
+  sage_emails: string | null
+  sage_files: string | null
+  cache_status: {
+    prefetch_in_progress: boolean
+    last_prefetch: number
+    calendar_valid: boolean
+    meetings_valid: boolean
+    emails_valid: boolean
+    files_valid: boolean
+  }
+}
+
+/**
+ * Inline mock WorkIQ context for frontend mock mode.
+ * Used when isMockMode=true so no backend call is needed.
+ */
+export const MOCK_WORKIQ_CONTEXT: WorkIQContext = {
+  workiq_enabled: true,
+  calendar_today:
+    "You have **5 meetings** on your calendar today:\n\n### Morning\n- **9:00 – 9:30** — *Team Standup* (recurring)\n- **10:00 – 10:30** — *Portfolio Review: Q1 Rebalancing*\n\n### Afternoon\n- **1:00 – 1:30** — *Client Onboarding: Sarah Chen*\n- **2:00 – 2:30** — *Compliance Training Update*\n- **4:00 – 4:15** — *Sage Advisor Meeting: John Doe* (recurring, weekly)\n  - Agenda includes reviewing portfolio allocation, retirement projection updates, and risk assessment for upcoming market changes.",
+  sage_meetings:
+    "Your next **Sage Advisor Meeting** is today:\n\n**Sage Advisor Meeting: John Doe**\n- **Time:** 4:00 – 4:15 PM\n- **Recurrence:** Weekly\n- **Agenda:**\n  1. Review current portfolio allocation (70/30 stocks/bonds)\n  2. Discuss retirement projection updates — target age 65, current age 40\n  3. Risk assessment for market outlook\n  4. Address contribution rate optimization ($250,000 portfolio)\n  5. Review any new Sage alerts or notifications\n  6. Next steps and action items",
+  sage_emails:
+    "Found **1 recent email** with 'Sage' in the subject:\n\n- **Sage Alert: Portfolio Rebalancing Recommended** — received today\n  - Summary: Automated alert indicating John Doe's portfolio has drifted from target allocation. Current allocation is 73/27 vs. target 70/30. Recommends rebalancing to restore target weighting.",
+  sage_files:
+    "Found **2 files** in your **Sage** folder on OneDrive:\n\n1. **Daily Brief.txt** — Last modified today\n   - Contains your daily advisor briefing notes and priority client actions\n2. **John Doe - client profile.txt** — Last modified this week\n   - Contains client profile details: age 40, target retirement 65, $250k portfolio, 70/30 allocation, moderate risk tolerance",
+  cache_status: {
+    prefetch_in_progress: false,
+    last_prefetch: Date.now(),
+    calendar_valid: true,
+    meetings_valid: true,
+    emails_valid: true,
+    files_valid: true,
+  },
+}
+
+/**
+ * Trigger background pre-fetch of WorkIQ context.
+ * Call this on app startup to warm the cache.
+ */
+export async function prefetchWorkIQContext(): Promise<void> {
+  try {
+    await fetch(`${API_BASE_URL}/advisor/workiq/prefetch`, { method: 'POST' })
+  } catch (e) {
+    console.warn('WorkIQ prefetch failed:', e)
+  }
+}
+
+/**
+ * Get cached WorkIQ context for enriching advisor views.
+ */
+export async function getWorkIQContext(): Promise<WorkIQContext> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/advisor/workiq/context`)
+    if (!response.ok) throw new Error('Failed to get WorkIQ context')
+    return await response.json()
+  } catch (e) {
+    console.warn('WorkIQ context fetch failed:', e)
+    return {
+      workiq_enabled: false,
+      calendar_today: null,
+      sage_meetings: null,
+      sage_emails: null,
+      sage_files: null,
+      cache_status: {
+        prefetch_in_progress: false,
+        last_prefetch: 0,
+        calendar_valid: false,
+        meetings_valid: false,
+        emails_valid: false,
+        files_valid: false,
+      },
+    }
+  }
+}
+
+/**
+ * Get cached Sage meeting info for appointments view.
+ */
+export async function getWorkIQMeetings(): Promise<{ workiq_enabled: boolean; data: string | null }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/advisor/workiq/meetings`)
+    if (!response.ok) throw new Error('Failed to get WorkIQ meetings')
+    return await response.json()
+  } catch (e) {
+    return { workiq_enabled: false, data: null }
+  }
+}
+
+/**
+ * Get cached Sage email subjects for escalations view.
+ */
+export async function getWorkIQEmails(): Promise<{ workiq_enabled: boolean; data: string | null }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/advisor/workiq/emails`)
+    if (!response.ok) throw new Error('Failed to get WorkIQ emails')
+    return await response.json()
+  } catch (e) {
+    return { workiq_enabled: false, data: null }
+  }
 }

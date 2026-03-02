@@ -63,44 +63,44 @@ interface QuickQuery {
 const QUICK_QUERIES: QuickQuery[] = [
   {
     id: "401k-limits",
-    label: "2026 401(k) Limits",
+    label: "RRSP Limits & Deadline",
     icon: <DollarSign className="w-4 h-4" />,
-    prompt: "What are the 2026 401(k) contribution limits, including catch-up contributions?",
+    prompt: "For a Canadian client, what is the RRSP contribution limit and what deadline applies for claiming contributions against the prior tax year?",
     category: "regulatory",
   },
   {
     id: "roth-conversion",
-    label: "Roth Conversion Rules",
+    label: "TFSA Rules",
     icon: <RefreshCw className="w-4 h-4" />,
-    prompt: "Explain the current Roth conversion rules and tax implications for high-income clients.",
+    prompt: "Can you summarize TFSA contribution and withdrawal rules, including when withdrawn room is added back?",
     category: "regulatory",
   },
   {
     id: "rrsp-limits",
-    label: "2026 RRSP Limits (CA)",
+    label: "RRIF Conversion & Minimums",
     icon: <DollarSign className="w-4 h-4" />,
-    prompt: "What are the 2026 RRSP contribution limits for Canadian clients?",
+    prompt: "What are the RRSP-to-RRIF conversion rules and how should I explain minimum RRIF withdrawals by age?",
     category: "regulatory",
   },
   {
     id: "cpp-timing",
     label: "CPP Timing Strategy",
     icon: <Scale className="w-4 h-4" />,
-    prompt: "What factors should I consider when advising Canadian clients on CPP claiming timing?",
+    prompt: "How should I frame CPP timing at 60 vs 65 vs 70 for a Canadian client, and what trade-offs should I highlight?",
     category: "planning",
   },
   {
     id: "social-security",
-    label: "Social Security Strategies",
+    label: "OAS & GIS Basics",
     icon: <Scale className="w-4 h-4" />,
-    prompt: "Summarize the key Social Security claiming strategies for married couples.",
+    prompt: "Can you summarize OAS and GIS eligibility basics and when each benefit becomes relevant in retirement planning?",
     category: "planning",
   },
   {
     id: "rmd-rules",
-    label: "RMD Requirements",
+    label: "HBP & LLP from RRSP",
     icon: <BookOpen className="w-4 h-4" />,
-    prompt: "What are the current Required Minimum Distribution rules and start ages?",
+    prompt: "What are the key rules for using RRSP funds through the Home Buyers' Plan and the Lifelong Learning Plan?",
     category: "regulatory",
   },
 ]
@@ -109,64 +109,62 @@ const QUICK_QUERIES: QuickQuery[] = [
 
 const MOCK_RESPONSES: Record<string, { content: string; citations?: AdvisorChatCitation[] }> = {
   "401k-limits": {
-    content: `## 2026 401(k) Contribution Limits
+    content: `## RRSP Contribution Rules (Canada)
 
-### Employee Contributions
-- **Standard Limit**: $23,500 (up from $23,000 in 2025) [REF:us-401k-limit-2026]
-- **Catch-up Contribution (Age 50+)**: Additional $7,500 [REF:us-401k-catchup-2026]
-- **Total for 50+**: $31,000
+### Contribution Limit Framework
+- **Formula**: Lesser of 18% of prior-year earned income and the annual dollar maximum [REF:ca-rrsp-limit-2026]
+- **Unused Room**: Carries forward indefinitely
+- **Pension Adjustment**: May reduce available RRSP room for clients with pension plans
 
-### Key Changes for 2026
-- **Ages 60-63**: Additional catch-up of $11,250 (instead of $7,500)
-- **Total for ages 60-63**: $34,750
+### Contribution Deadline
+- **Prior-Year Deduction Window**: Contributions made in the first 60 days of the calendar year can be applied to the prior tax year
+- **Planning Tip**: Confirm exact CRA deadline date each year for filing workflows
 
-### Important Notes
-- These limits apply to all 401(k) contributions combined if client has multiple employers
-- Roth 401(k) contributions count toward the same limit`,
+### Advisor Considerations
+1. **Coordinate with Tax Bracket Planning**: Compare RRSP deduction benefit now vs expected retirement tax rate
+2. **Validate CRA Notice of Assessment Room**: Use client-specific room before recommending top-up
+3. **Pair with TFSA Strategy**: Blend RRSP and TFSA when flexibility is needed`,
     citations: [
-      { id: "us-401k-limit-2026", title: "401(k) Contribution Limit 2026", source: "https://www.irs.gov/retirement-plans/plan-participant-employee/retirement-topics-401k-and-profit-sharing-plan-contribution-limits" },
-      { id: "us-401k-catchup-2026", title: "401(k) Catch-Up Contribution 2026", source: "https://www.irs.gov/retirement-plans/plan-participant-employee/retirement-topics-catch-up-contributions" },
+      { id: "ca-rrsp-limit-2026", title: "RRSP Contribution Limit 2026", source: "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/rrsps-related-plans/contributing-a-rrsp-prpp.html" },
     ],
   },
   "roth-conversion": {
-    content: `## Roth Conversion Rules & Strategy
+    content: `## TFSA Contributions and Withdrawals
 
-### Basic Rules
-- **Taxable Event**: Conversions are taxable as ordinary income in the year of conversion
-- **No Income Limits**: Anyone can convert regardless of income
-- **No Amount Limits**: No cap on conversion amounts
-- **Irreversible**: Cannot be undone (recharacterization eliminated by TCJA)
+### Core Contribution Rules
+- **Annual Room**: Clients can contribute up to available TFSA room [REF:ca-tfsa-limit-2026]
+- **No Deduction**: TFSA contributions are not tax-deductible
+- **Over-Contribution Risk**: Excess contributions can trigger CRA penalties
 
-### Strategy for High-Income Clients
-1. **Backdoor Roth**: Contribute to non-deductible Traditional IRA, then convert
-2. **Mega Backdoor Roth**: After-tax 401(k) contributions + in-plan conversion
-3. **Tax Bracket Management**: Fill up lower brackets in early retirement years
+### Withdrawal Mechanics
+1. **Tax Treatment**: Eligible TFSA withdrawals are tax-free
+2. **Room Reinstatement**: Withdrawn amounts are generally added back in the next calendar year
+3. **Timing Note**: Re-contributing in the same year may cause over-contribution if no room remains
 
-### Pro Rata Rule Warning
-If client has existing pre-tax IRA balances, conversions are taxed proportionally across ALL IRA assets.`,
+### Advisor Considerations
+- TFSA often complements RRSP for clients expecting similar or higher retirement tax rates
+- Track room carefully for clients making multiple in-year deposits and withdrawals`,
     citations: [
-      { id: "us-roth-conversion", title: "Roth Conversion Tax Treatment", source: "https://www.irs.gov/retirement-plans/roth-iras" },
+      { id: "ca-tfsa-limit-2026", title: "TFSA Contribution Limit 2026", source: "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/tax-free-savings-account/contributions.html" },
     ],
   },
   "rrsp-limits": {
-    content: `## 2026 RRSP Contribution Limits (Canada)
+    content: `## RRSP to RRIF Conversion and Minimum Withdrawals
 
-### Contribution Limit
-- **Maximum**: $32,490 for 2026 [REF:ca-rrsp-limit-2026]
-- **Calculation**: 18% of previous year's earned income, up to the maximum
-- **Carry Forward**: Unused room carries forward indefinitely
+### RRIF Conversion Rule
+- **Mandatory Conversion**: RRSP must be converted by the end of the year the client turns 71 [REF:ca-rrif-conversion]
+- **Eligible Paths**: Typically convert to RRIF or purchase an annuity
 
-### TFSA Limits for Comparison
-- **2026 Annual Limit**: $7,000 [REF:ca-tfsa-limit-2026]
-- **Cumulative Limit** (since 2009): $102,000
+### Minimum Withdrawal Requirement
+- **Annual Minimum**: Once converted, clients must withdraw at least the minimum amount each year
+- **Age-Based Factor**: Minimum percentage increases with age
 
-### Strategy Considerations
-1. **RRSP vs TFSA**: Consider tax bracket now vs. expected retirement bracket
-2. **Pension Adjustment**: Reduces RRSP room for clients with workplace pensions
-3. **Spousal RRSP**: Can equalize retirement income between spouses`,
+### Advisor Considerations
+1. **Cash-Flow Planning**: Integrate RRIF minimums with CPP/OAS timing
+2. **Tax Smoothing**: Manage withdrawals to reduce bracket spikes
+3. **Household Strategy**: Coordinate spouse accounts and pension income splitting where applicable`,
     citations: [
-      { id: "ca-rrsp-limit-2026", title: "RRSP Contribution Limit 2026", source: "https://www.canada.ca/en/revenue-agency/services/tax/registered-plans-administrators/registered-retirement-savings-plans.html" },
-      { id: "ca-tfsa-limit-2026", title: "TFSA Contribution Limit 2026", source: "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/tax-free-savings-account.html" },
+      { id: "ca-rrif-conversion", title: "RRSP to RRIF Conversion", source: "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/registered-retirement-income-fund-rrif.html" },
     ],
   },
 }

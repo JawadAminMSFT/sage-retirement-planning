@@ -1,0 +1,22 @@
+client_id,account_id,name,type,balance
+demo-user,demo-user-401k,Traditional 401(k),401k,125000.0
+demo-user,demo-user-roth,Roth IRA,roth_ira,50000.0
+demo-user,demo-user-brokerage,Individual Brokerage,brokerage,75000.0
+young-professional,young-professional-401k,Traditional 401(k),401k,22500.0
+young-professional,young-professional-roth,Roth IRA,roth_ira,9000.0
+young-professional,young-professional-brokerage,Individual Brokerage,brokerage,13500.0
+mid-career,mid-career-401k,Traditional 401(k),401k,200000.0
+mid-career,mid-career-roth,Roth IRA,roth_ira,80000.0
+mid-career,mid-career-brokerage,Individual Brokerage,brokerage,120000.0
+conservative-saver,conservative-saver-401k,Traditional 401(k),401k,300000.0
+conservative-saver,conservative-saver-roth,Roth IRA,roth_ira,120000.0
+conservative-saver,conservative-saver-brokerage,Individual Brokerage,brokerage,180000.0
+high-earner,high-earner-401k,Traditional 401(k),401k,400000.0
+high-earner,high-earner-roth,Roth IRA,roth_ira,160000.0
+high-earner,high-earner-brokerage,Individual Brokerage,brokerage,240000.0
+canadian-professional,canadian-professional-401k,Traditional 401(k),401k,160000.0
+canadian-professional,canadian-professional-roth,Roth IRA,roth_ira,64000.0
+canadian-professional,canadian-professional-brokerage,Individual Brokerage,brokerage,96000.0
+pre-retiree-ca,pre-retiree-ca-401k,Traditional 401(k),401k,375000.0
+pre-retiree-ca,pre-retiree-ca-roth,Roth IRA,roth_ira,150000.0
+pre-retiree-ca,pre-retiree-ca-brokerage,Individual Brokerage,brokerage,225000.0

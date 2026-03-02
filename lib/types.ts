@@ -10,6 +10,9 @@ export type Jurisdiction = 'US' | 'CA'
 export type ClientStatus = 'healthy' | 'needs_attention' | 'critical'
 export type RiskAppetite = 'low' | 'medium' | 'high'
 
+/** Data source for live-mode client queries: local (Azure AI Agent) or fabric (Fabric Data Agent) */
+export type DataSourceMode = 'local' | 'fabric'
+
 // ─── Base User Types ────────────────────────────────────────────────────────
 
 export interface BaseUser {

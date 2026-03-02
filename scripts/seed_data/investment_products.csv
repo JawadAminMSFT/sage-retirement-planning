@@ -1,0 +1,19 @@
+name,risk_level,exp_return,risk_rating,asset_class,description,expense_ratio,minimum_investment
+Vanguard Total Bond Market ETF (BND),low,0.042,low,bonds,"Tracks the Bloomberg U.S. Aggregate Float Adjusted Index, providing broad exposure to U.S. investment-grade bonds",0.0003,1000
+iShares 1-3 Year Treasury Bond ETF (SHY),low,0.028,low,government_bonds,"Tracks short-term U.S. Treasury bonds with 1-3 year maturities, offering high liquidity and low duration risk",0.0015,500
+Vanguard Short-Term Corporate Bond ETF (VCSH),low,0.038,low,corporate_bonds,"Invests in high-quality corporate bonds with 1-5 year maturities, providing slightly higher yield than Treasuries",0.0004,1000
+Fidelity Government Money Market Fund (SPAXX),low,0.022,very_low,cash_equivalents,"Invests in U.S. government securities and repurchase agreements, providing capital preservation and liquidity",0.0042,100
+iShares TIPS Bond ETF (SCHP),low,0.035,low,inflation_protected,Tracks U.S. Treasury Inflation-Protected Securities (TIPS) to provide inflation protection and real returns,0.0005,1000
+Vanguard Balanced Index Fund (VBIAX),medium,0.068,medium,balanced,60% stocks/40% bonds allocation providing balanced growth and income with automatic rebalancing,0.0007,3000
+Schwab Target Date 2060 Fund (SWYNX),medium,0.075,medium,target_date,Age-appropriate diversified portfolio that automatically adjusts allocation as retirement approaches,0.0008,1000
+Vanguard Total International Stock ETF (VTIAX),medium,0.071,medium,international_equity,Broad exposure to developed and emerging international markets outside the U.S. for global diversification,0.0008,3000
+iShares Core S&P 500 ETF (IVV),medium,0.078,medium,large_cap_equity,"Tracks the S&P 500 index, providing exposure to 500 of the largest U.S. companies",0.0003,1000
+Fidelity Total Market Index Fund (FZROX),medium,0.076,medium,total_market_equity,Zero-fee fund tracking the entire U.S. stock market from large-cap to small-cap companies,0.0,0
+Vanguard Growth ETF (VUG),high,0.089,medium-high,growth_equity,Focuses on large-cap U.S. growth stocks with strong earnings potential and above-average growth rates,0.0004,1000
+iShares MSCI Emerging Markets ETF (EEM),high,0.095,high,emerging_markets,Exposure to large and mid-cap stocks in emerging market countries with higher growth potential,0.0068,1000
+Vanguard Small-Cap ETF (VB),high,0.092,high,small_cap_equity,Invests in small-cap U.S. companies with higher growth potential but increased volatility,0.0005,1000
+Technology Select Sector SPDR Fund (XLK),high,0.105,very_high,sector_equity,"Concentrated exposure to technology companies including software, hardware, and semiconductor firms",0.001,1000
+ARK Innovation ETF (ARKK),high,0.118,very_high,disruptive_innovation,"Actively managed fund investing in companies driving disruptive innovation across genomics, AI, and automation",0.0075,1000
+Invesco QQQ Trust ETF (QQQ),high,0.096,high,growth_equity,"Tracks the NASDAQ-100 index, heavily weighted toward large technology and growth companies",0.002,1000
+iShares Russell 2000 Growth ETF (IWO),high,0.094,high,small_cap_growth,Focuses on small-cap growth companies with strong earnings acceleration and revenue growth,0.0024,1000
+First Trust Cloud Computing ETF (SKYY),high,0.102,very_high,thematic_technology,"Invests in companies involved in cloud computing infrastructure, platforms, and software services",0.006,1000

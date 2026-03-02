@@ -1,0 +1,114 @@
+[
+  {
+    "id": "rrsp-deadline",
+    "label": "RRSP limit and deadline",
+    "category": "regulatory",
+    "prompt": "For a Canadian client, what is the RRSP contribution limit and the deadline to claim contributions against the prior tax year?",
+    "expected_keywords": ["RRSP", "contribution", "deadline", "60 days", "earned income"]
+  },
+  {
+    "id": "rrsp-overview",
+    "label": "RRSP overview",
+    "category": "regulatory",
+    "prompt": "Can you summarize the main rules and benefits of a Registered Retirement Savings Plan in Canada?",
+    "expected_keywords": ["RRSP", "deduction", "contribution", "tax", "Canada"]
+  },
+  {
+    "id": "tfsa-contrib",
+    "label": "TFSA contributions",
+    "category": "regulatory",
+    "prompt": "How do TFSA contribution room and annual limits work for Canadian residents?",
+    "expected_keywords": ["TFSA", "contribution", "room", "annual", "limit"]
+  },
+  {
+    "id": "tfsa-withdraw",
+    "label": "TFSA withdrawals",
+    "category": "regulatory",
+    "prompt": "What happens to TFSA contribution room after a withdrawal, and when can the room be reused?",
+    "expected_keywords": ["TFSA", "withdrawal", "room", "next year", "contribution"]
+  },
+  {
+    "id": "rrif-conversion",
+    "label": "RRSP to RRIF conversion",
+    "category": "regulatory",
+    "prompt": "What are the rules for converting an RRSP to a RRIF, and by what age must that conversion happen?",
+    "expected_keywords": ["RRSP", "RRIF", "age", "conversion", "minimum"]
+  },
+  {
+    "id": "rrif-min-withdrawal",
+    "label": "RRIF minimum withdrawal",
+    "category": "regulatory",
+    "prompt": "How are RRIF minimum withdrawals determined by age in Canada?",
+    "expected_keywords": ["RRIF", "minimum", "withdrawal", "age", "percentage"]
+  },
+  {
+    "id": "hbp-rules",
+    "label": "Home Buyers Plan",
+    "category": "planning",
+    "prompt": "Can you explain the key Home Buyers' Plan rules for RRSP withdrawals and repayment requirements?",
+    "expected_keywords": ["Home Buyers", "RRSP", "withdrawal", "repayment", "HBP"]
+  },
+  {
+    "id": "llp-rules",
+    "label": "Lifelong Learning Plan",
+    "category": "planning",
+    "prompt": "How does the Lifelong Learning Plan work for RRSP education withdrawals and repayments?",
+    "expected_keywords": ["Lifelong Learning", "RRSP", "education", "withdrawal", "repayment"]
+  },
+  {
+    "id": "cpp-timing",
+    "label": "CPP timing",
+    "category": "planning",
+    "prompt": "What are the CPP timing trade-offs between starting benefits at 60, 65, or 70?",
+    "expected_keywords": ["CPP", "60", "65", "70", "benefit"]
+  },
+  {
+    "id": "cpp-amount",
+    "label": "CPP amount factors",
+    "category": "planning",
+    "prompt": "What factors determine a client's CPP retirement pension amount?",
+    "expected_keywords": ["CPP", "amount", "contributions", "retirement", "pension"]
+  },
+  {
+    "id": "oas-basics",
+    "label": "OAS basics",
+    "category": "planning",
+    "prompt": "What are the core OAS eligibility rules and deferral options in Canada?",
+    "expected_keywords": ["OAS", "eligibility", "deferral", "age", "Canada"]
+  },
+  {
+    "id": "gis-basics",
+    "label": "GIS basics",
+    "category": "planning",
+    "prompt": "When does the Guaranteed Income Supplement apply, and what income factors matter most?",
+    "expected_keywords": ["GIS", "income", "supplement", "OAS", "eligibility"]
+  },
+  {
+    "id": "resp-overview",
+    "label": "RESP overview",
+    "category": "planning",
+    "prompt": "Can you summarize RESP contribution basics and how the account is used for post-secondary education savings?",
+    "expected_keywords": ["RESP", "contribution", "education", "savings", "beneficiary"]
+  },
+  {
+    "id": "cesg-basics",
+    "label": "CESG basics",
+    "category": "planning",
+    "prompt": "How does the Canada Education Savings Grant work and what are the annual and lifetime grant limits?",
+    "expected_keywords": ["CESG", "grant", "annual", "lifetime", "RESP"]
+  },
+  {
+    "id": "federal-tax-rates",
+    "label": "Federal tax rates",
+    "category": "regulatory",
+    "prompt": "Where can I find the current Canadian federal income tax rates and how should advisors use them in planning?",
+    "expected_keywords": ["federal", "income tax", "rates", "Canada", "planning"]
+  },
+  {
+    "id": "capital-gains",
+    "label": "Capital gains inclusion",
+    "category": "regulatory",
+    "prompt": "What are the current Canadian capital gains inclusion rate rules and what planning impact should advisors watch?",
+    "expected_keywords": ["capital gains", "inclusion", "rate", "Canada", "tax"]
+  }
+]

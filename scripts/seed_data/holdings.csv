@@ -1,0 +1,112 @@
+client_id,account_id,symbol,name,allocation_pct,value,asset_class
+demo-user,demo-user-401k,VTI,Vanguard Total Stock Market ETF,35,43750.0,stocks
+demo-user,demo-user-401k,VXUS,Vanguard Total Intl Stock ETF,15,18750.0,international
+demo-user,demo-user-401k,BND,Vanguard Total Bond Market ETF,25,31250.0,bonds
+demo-user,demo-user-401k,VGT,Vanguard Information Technology ETF,15,18750.0,stocks
+demo-user,demo-user-401k,VNQ,Vanguard Real Estate ETF,10,12500.0,real_estate
+demo-user,demo-user-roth,VTI,Vanguard Total Stock Market ETF,35,17500.0,stocks
+demo-user,demo-user-roth,VXUS,Vanguard Total Intl Stock ETF,15,7500.0,international
+demo-user,demo-user-roth,BND,Vanguard Total Bond Market ETF,25,12500.0,bonds
+demo-user,demo-user-roth,VGT,Vanguard Information Technology ETF,15,7500.0,stocks
+demo-user,demo-user-roth,VNQ,Vanguard Real Estate ETF,10,5000.0,real_estate
+demo-user,demo-user-brokerage,VTI,Vanguard Total Stock Market ETF,35,26250.0,stocks
+demo-user,demo-user-brokerage,VXUS,Vanguard Total Intl Stock ETF,15,11250.0,international
+demo-user,demo-user-brokerage,BND,Vanguard Total Bond Market ETF,25,18750.0,bonds
+demo-user,demo-user-brokerage,VGT,Vanguard Information Technology ETF,15,11250.0,stocks
+demo-user,demo-user-brokerage,VNQ,Vanguard Real Estate ETF,10,7500.0,real_estate
+young-professional,young-professional-401k,VTI,Vanguard Total Stock Market ETF,30,6750.0,stocks
+young-professional,young-professional-401k,VGT,Vanguard Information Technology ETF,25,5625.0,stocks
+young-professional,young-professional-401k,VXUS,Vanguard Total Intl Stock ETF,15,3375.0,international
+young-professional,young-professional-401k,ARKK,ARK Innovation ETF,10,2250.0,stocks
+young-professional,young-professional-401k,VNQ,Vanguard Real Estate ETF,10,2250.0,real_estate
+young-professional,young-professional-401k,BND,Vanguard Total Bond Market ETF,10,2250.0,bonds
+young-professional,young-professional-roth,VTI,Vanguard Total Stock Market ETF,30,2700.0,stocks
+young-professional,young-professional-roth,VGT,Vanguard Information Technology ETF,25,2250.0,stocks
+young-professional,young-professional-roth,VXUS,Vanguard Total Intl Stock ETF,15,1350.0,international
+young-professional,young-professional-roth,ARKK,ARK Innovation ETF,10,900.0,stocks
+young-professional,young-professional-roth,VNQ,Vanguard Real Estate ETF,10,900.0,real_estate
+young-professional,young-professional-roth,BND,Vanguard Total Bond Market ETF,10,900.0,bonds
+young-professional,young-professional-brokerage,VTI,Vanguard Total Stock Market ETF,30,4050.0,stocks
+young-professional,young-professional-brokerage,VGT,Vanguard Information Technology ETF,25,3375.0,stocks
+young-professional,young-professional-brokerage,VXUS,Vanguard Total Intl Stock ETF,15,2025.0,international
+young-professional,young-professional-brokerage,ARKK,ARK Innovation ETF,10,1350.0,stocks
+young-professional,young-professional-brokerage,VNQ,Vanguard Real Estate ETF,10,1350.0,real_estate
+young-professional,young-professional-brokerage,BND,Vanguard Total Bond Market ETF,10,1350.0,bonds
+mid-career,mid-career-401k,VTI,Vanguard Total Stock Market ETF,35,70000.0,stocks
+mid-career,mid-career-401k,VXUS,Vanguard Total Intl Stock ETF,15,30000.0,international
+mid-career,mid-career-401k,BND,Vanguard Total Bond Market ETF,25,50000.0,bonds
+mid-career,mid-career-401k,VGT,Vanguard Information Technology ETF,15,30000.0,stocks
+mid-career,mid-career-401k,VNQ,Vanguard Real Estate ETF,10,20000.0,real_estate
+mid-career,mid-career-roth,VTI,Vanguard Total Stock Market ETF,35,28000.0,stocks
+mid-career,mid-career-roth,VXUS,Vanguard Total Intl Stock ETF,15,12000.0,international
+mid-career,mid-career-roth,BND,Vanguard Total Bond Market ETF,25,20000.0,bonds
+mid-career,mid-career-roth,VGT,Vanguard Information Technology ETF,15,12000.0,stocks
+mid-career,mid-career-roth,VNQ,Vanguard Real Estate ETF,10,8000.0,real_estate
+mid-career,mid-career-brokerage,VTI,Vanguard Total Stock Market ETF,35,42000.0,stocks
+mid-career,mid-career-brokerage,VXUS,Vanguard Total Intl Stock ETF,15,18000.0,international
+mid-career,mid-career-brokerage,BND,Vanguard Total Bond Market ETF,25,30000.0,bonds
+mid-career,mid-career-brokerage,VGT,Vanguard Information Technology ETF,15,18000.0,stocks
+mid-career,mid-career-brokerage,VNQ,Vanguard Real Estate ETF,10,12000.0,real_estate
+conservative-saver,conservative-saver-401k,BND,Vanguard Total Bond Market ETF,40,120000.0,bonds
+conservative-saver,conservative-saver-401k,VTIP,Vanguard Short-Term Inflation-Protected,20,60000.0,bonds
+conservative-saver,conservative-saver-401k,VTI,Vanguard Total Stock Market ETF,20,60000.0,stocks
+conservative-saver,conservative-saver-401k,VIG,Vanguard Dividend Appreciation ETF,10,30000.0,stocks
+conservative-saver,conservative-saver-401k,VXUS,Vanguard Total Intl Stock ETF,10,30000.0,international
+conservative-saver,conservative-saver-roth,BND,Vanguard Total Bond Market ETF,40,48000.0,bonds
+conservative-saver,conservative-saver-roth,VTIP,Vanguard Short-Term Inflation-Protected,20,24000.0,bonds
+conservative-saver,conservative-saver-roth,VTI,Vanguard Total Stock Market ETF,20,24000.0,stocks
+conservative-saver,conservative-saver-roth,VIG,Vanguard Dividend Appreciation ETF,10,12000.0,stocks
+conservative-saver,conservative-saver-roth,VXUS,Vanguard Total Intl Stock ETF,10,12000.0,international
+conservative-saver,conservative-saver-brokerage,BND,Vanguard Total Bond Market ETF,40,72000.0,bonds
+conservative-saver,conservative-saver-brokerage,VTIP,Vanguard Short-Term Inflation-Protected,20,36000.0,bonds
+conservative-saver,conservative-saver-brokerage,VTI,Vanguard Total Stock Market ETF,20,36000.0,stocks
+conservative-saver,conservative-saver-brokerage,VIG,Vanguard Dividend Appreciation ETF,10,18000.0,stocks
+conservative-saver,conservative-saver-brokerage,VXUS,Vanguard Total Intl Stock ETF,10,18000.0,international
+high-earner,high-earner-401k,VTI,Vanguard Total Stock Market ETF,30,120000.0,stocks
+high-earner,high-earner-401k,VGT,Vanguard Information Technology ETF,25,100000.0,stocks
+high-earner,high-earner-401k,VXUS,Vanguard Total Intl Stock ETF,15,60000.0,international
+high-earner,high-earner-401k,ARKK,ARK Innovation ETF,10,40000.0,stocks
+high-earner,high-earner-401k,VNQ,Vanguard Real Estate ETF,10,40000.0,real_estate
+high-earner,high-earner-401k,BND,Vanguard Total Bond Market ETF,10,40000.0,bonds
+high-earner,high-earner-roth,VTI,Vanguard Total Stock Market ETF,30,48000.0,stocks
+high-earner,high-earner-roth,VGT,Vanguard Information Technology ETF,25,40000.0,stocks
+high-earner,high-earner-roth,VXUS,Vanguard Total Intl Stock ETF,15,24000.0,international
+high-earner,high-earner-roth,ARKK,ARK Innovation ETF,10,16000.0,stocks
+high-earner,high-earner-roth,VNQ,Vanguard Real Estate ETF,10,16000.0,real_estate
+high-earner,high-earner-roth,BND,Vanguard Total Bond Market ETF,10,16000.0,bonds
+high-earner,high-earner-brokerage,VTI,Vanguard Total Stock Market ETF,30,72000.0,stocks
+high-earner,high-earner-brokerage,VGT,Vanguard Information Technology ETF,25,60000.0,stocks
+high-earner,high-earner-brokerage,VXUS,Vanguard Total Intl Stock ETF,15,36000.0,international
+high-earner,high-earner-brokerage,ARKK,ARK Innovation ETF,10,24000.0,stocks
+high-earner,high-earner-brokerage,VNQ,Vanguard Real Estate ETF,10,24000.0,real_estate
+high-earner,high-earner-brokerage,BND,Vanguard Total Bond Market ETF,10,24000.0,bonds
+canadian-professional,canadian-professional-401k,VTI,Vanguard Total Stock Market ETF,35,56000.0,stocks
+canadian-professional,canadian-professional-401k,VXUS,Vanguard Total Intl Stock ETF,15,24000.0,international
+canadian-professional,canadian-professional-401k,BND,Vanguard Total Bond Market ETF,25,40000.0,bonds
+canadian-professional,canadian-professional-401k,VGT,Vanguard Information Technology ETF,15,24000.0,stocks
+canadian-professional,canadian-professional-401k,VNQ,Vanguard Real Estate ETF,10,16000.0,real_estate
+canadian-professional,canadian-professional-roth,VTI,Vanguard Total Stock Market ETF,35,22400.0,stocks
+canadian-professional,canadian-professional-roth,VXUS,Vanguard Total Intl Stock ETF,15,9600.0,international
+canadian-professional,canadian-professional-roth,BND,Vanguard Total Bond Market ETF,25,16000.0,bonds
+canadian-professional,canadian-professional-roth,VGT,Vanguard Information Technology ETF,15,9600.0,stocks
+canadian-professional,canadian-professional-roth,VNQ,Vanguard Real Estate ETF,10,6400.0,real_estate
+canadian-professional,canadian-professional-brokerage,VTI,Vanguard Total Stock Market ETF,35,33600.0,stocks
+canadian-professional,canadian-professional-brokerage,VXUS,Vanguard Total Intl Stock ETF,15,14400.0,international
+canadian-professional,canadian-professional-brokerage,BND,Vanguard Total Bond Market ETF,25,24000.0,bonds
+canadian-professional,canadian-professional-brokerage,VGT,Vanguard Information Technology ETF,15,14400.0,stocks
+canadian-professional,canadian-professional-brokerage,VNQ,Vanguard Real Estate ETF,10,9600.0,real_estate
+pre-retiree-ca,pre-retiree-ca-401k,BND,Vanguard Total Bond Market ETF,40,150000.0,bonds
+pre-retiree-ca,pre-retiree-ca-401k,VTIP,Vanguard Short-Term Inflation-Protected,20,75000.0,bonds
+pre-retiree-ca,pre-retiree-ca-401k,VTI,Vanguard Total Stock Market ETF,20,75000.0,stocks
+pre-retiree-ca,pre-retiree-ca-401k,VIG,Vanguard Dividend Appreciation ETF,10,37500.0,stocks
+pre-retiree-ca,pre-retiree-ca-401k,VXUS,Vanguard Total Intl Stock ETF,10,37500.0,international
+pre-retiree-ca,pre-retiree-ca-roth,BND,Vanguard Total Bond Market ETF,40,60000.0,bonds
+pre-retiree-ca,pre-retiree-ca-roth,VTIP,Vanguard Short-Term Inflation-Protected,20,30000.0,bonds
+pre-retiree-ca,pre-retiree-ca-roth,VTI,Vanguard Total Stock Market ETF,20,30000.0,stocks
+pre-retiree-ca,pre-retiree-ca-roth,VIG,Vanguard Dividend Appreciation ETF,10,15000.0,stocks
+pre-retiree-ca,pre-retiree-ca-roth,VXUS,Vanguard Total Intl Stock ETF,10,15000.0,international
+pre-retiree-ca,pre-retiree-ca-brokerage,BND,Vanguard Total Bond Market ETF,40,90000.0,bonds
+pre-retiree-ca,pre-retiree-ca-brokerage,VTIP,Vanguard Short-Term Inflation-Protected,20,45000.0,bonds
+pre-retiree-ca,pre-retiree-ca-brokerage,VTI,Vanguard Total Stock Market ETF,20,45000.0,stocks
+pre-retiree-ca,pre-retiree-ca-brokerage,VIG,Vanguard Dividend Appreciation ETF,10,22500.0,stocks
+pre-retiree-ca,pre-retiree-ca-brokerage,VXUS,Vanguard Total Intl Stock ETF,10,22500.0,international

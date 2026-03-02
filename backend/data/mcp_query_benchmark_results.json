@@ -1,0 +1,486 @@
+{
+  "ranked": [
+    {
+      "id": "federal-tax-rates",
+      "label": "Federal tax rates",
+      "category": "regulatory",
+      "prompt": "Where can I find the current Canadian federal income tax rates and how should advisors use them in planning?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 3980,
+      "avg_keyword_hits": 5,
+      "quality_score": 134.08,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "The current Canadian federal income tax rates can be found through the Government of Canada's official resources, which set these rates for individuals. Each province and territory also determines their own income tax rates, which apply in "
+    },
+    {
+      "id": "oas-basics",
+      "label": "OAS basics",
+      "category": "planning",
+      "prompt": "What are the core OAS eligibility rules and deferral options in Canada?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 4542,
+      "avg_keyword_hits": 5,
+      "quality_score": 131.83,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "To be eligible for the Old Age Security (OAS) pension in Canada, you must be 65 years or older. Service Canada can automatically enroll you for OAS if they have your eligibility information, and they will inform you by mail. If you have not"
+    },
+    {
+      "id": "gis-basics",
+      "label": "GIS basics",
+      "category": "planning",
+      "prompt": "When does the Guaranteed Income Supplement apply, and what income factors matter most?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 4722,
+      "avg_keyword_hits": 5,
+      "quality_score": 131.11,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "The Guaranteed Income Supplement (GIS) applies to individuals who are 65 years or older and are recipients of the Old Age Security (OAS) pension. It is a monthly, tax-free payment designed to assist low-income seniors in Canada [ref_id:0][r"
+    },
+    {
+      "id": "cpp-amount",
+      "label": "CPP amount factors",
+      "category": "planning",
+      "prompt": "What factors determine a client's CPP retirement pension amount?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 4876,
+      "avg_keyword_hits": 5,
+      "quality_score": 130.5,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "The amount of a client's Canada Pension Plan (CPP) retirement pension is determined by several factors:\n\n1. **Age at Retirement**: The age at which you start receiving your pension affects the amount. Starting earlier than age 65 may reduce"
+    },
+    {
+      "id": "tfsa-withdraw",
+      "label": "TFSA withdrawals",
+      "category": "regulatory",
+      "prompt": "What happens to TFSA contribution room after a withdrawal, and when can the room be reused?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 2934,
+      "avg_keyword_hits": 4,
+      "quality_score": 128.26,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "After a withdrawal from a Tax-Free Savings Account (TFSA), the contribution room is affected in the following way: the total amount withdrawn from the TFSA in a calendar year is added back to the contribution room at the beginning of the ne"
+    },
+    {
+      "id": "llp-rules",
+      "label": "Lifelong Learning Plan",
+      "category": "planning",
+      "prompt": "How does the Lifelong Learning Plan work for RRSP education withdrawals and repayments?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 6007,
+      "avg_keyword_hits": 5,
+      "quality_score": 125.97,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "The Lifelong Learning Plan (LLP) allows individuals to withdraw funds from their Registered Retirement Savings Plans (RRSPs) to finance education or training for themselves or their spouse/common-law partner. Withdrawals made under the LLP "
+    },
+    {
+      "id": "resp-overview",
+      "label": "RESP overview",
+      "category": "planning",
+      "prompt": "Can you summarize RESP contribution basics and how the account is used for post-secondary education savings?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 3507,
+      "avg_keyword_hits": 4,
+      "quality_score": 125.97,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "A Registered Education Savings Plan (RESP) is a contract designed to help save for a child's post-secondary education in Canada. The subscriber, who can be a parent or guardian, makes contributions to the plan, and the promoter agrees to pa"
+    },
+    {
+      "id": "tfsa-contrib",
+      "label": "TFSA contributions",
+      "category": "regulatory",
+      "prompt": "How do TFSA contribution room and annual limits work for Canadian residents?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 4838,
+      "avg_keyword_hits": 4.5,
+      "quality_score": 125.65,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "For Canadian residents, the Tax-Free Savings Account (TFSA) contribution room is determined by several factors. Each year, the government sets a TFSA dollar limit, which is the maximum amount you can contribute to your TFSA for that year. F"
+    },
+    {
+      "id": "cpp-timing",
+      "label": "CPP timing",
+      "category": "planning",
+      "prompt": "What are the CPP timing trade-offs between starting benefits at 60, 65, or 70?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 6265,
+      "avg_keyword_hits": 5,
+      "quality_score": 124.94,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "Starting Canada Pension Plan (CPP) benefits at different ages has distinct financial implications:\n\n1. **Starting at Age 60:**\n   - You can begin receiving CPP benefits at age 60, but the monthly amount will be reduced compared to starting "
+    },
+    {
+      "id": "rrsp-overview",
+      "label": "RRSP overview",
+      "category": "regulatory",
+      "prompt": "Can you summarize the main rules and benefits of a Registered Retirement Savings Plan in Canada?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 4877,
+      "avg_keyword_hits": 4,
+      "quality_score": 120.49,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "A Registered Retirement Savings Plan (RRSP) in Canada is a retirement savings plan registered with the Canada Revenue Agency (CRA) that allows individuals to contribute funds to save for retirement. Contributions to an RRSP are tax-deductib"
+    },
+    {
+      "id": "rrsp-deadline",
+      "label": "RRSP limit and deadline",
+      "category": "regulatory",
+      "prompt": "For a Canadian client, what is the RRSP contribution limit and the deadline to claim contributions against the prior tax year?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 3703,
+      "avg_keyword_hits": 3.5,
+      "quality_score": 120.19,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "The RRSP contribution limit for Canadians is determined by the Canada Revenue Agency (CRA) and is based on 18% of your earned income from the previous year, up to a maximum limit set annually by the CRA. The specific dollar amount for the c"
+    },
+    {
+      "id": "rrif-conversion",
+      "label": "RRSP to RRIF conversion",
+      "category": "regulatory",
+      "prompt": "What are the rules for converting an RRSP to a RRIF, and by what age must that conversion happen?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 3691,
+      "avg_keyword_hits": 3,
+      "quality_score": 115.24,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "In Canada, the conversion of a Registered Retirement Savings Plan (RRSP) to a Registered Retirement Income Fund (RRIF) must occur by the end of the year in which the RRSP holder turns 71 years old. This conversion is necessary to start rece"
+    },
+    {
+      "id": "rrif-min-withdrawal",
+      "label": "RRIF minimum withdrawal",
+      "category": "regulatory",
+      "prompt": "How are RRIF minimum withdrawals determined by age in Canada?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 4715,
+      "avg_keyword_hits": 1,
+      "quality_score": 91.14,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "An error occurred invoking 'knowledge_base_retrieve': TooManyRequests Message-{\"Message\":\"Could not complete model action. The model endpoint returned status code \\u0027429\\u0027 (TooManyRequests). Your requests to gpt-4o for gpt-4o in East"
+    },
+    {
+      "id": "hbp-rules",
+      "label": "Home Buyers Plan",
+      "category": "planning",
+      "prompt": "Can you explain the key Home Buyers' Plan rules for RRSP withdrawals and repayment requirements?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 4768,
+      "avg_keyword_hits": 0,
+      "quality_score": 80.93,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "An error occurred invoking 'knowledge_base_retrieve': TooManyRequests Message-{\"Message\":\"Could not complete model action. The model endpoint returned status code \\u0027429\\u0027 (TooManyRequests). Your requests to gpt-4o for gpt-4o in East"
+    },
+    {
+      "id": "cesg-basics",
+      "label": "CESG basics",
+      "category": "planning",
+      "prompt": "How does the Canada Education Savings Grant work and what are the annual and lifetime grant limits?",
+      "success_rate": 0.5,
+      "avg_latency_ms": 6345,
+      "avg_keyword_hits": 2.5,
+      "quality_score": 49.62,
+      "run_reasons": [
+        "parse_error",
+        "ok"
+      ],
+      "best_answer_preview": "The Canada Education Savings Grant (CESG) is a program that provides additional funds to a Registered Education Savings Plan (RESP) to help save for a child's post-secondary education. The grant matches contributions made to an RESP at a ra"
+    },
+    {
+      "id": "capital-gains",
+      "label": "Capital gains inclusion",
+      "category": "regulatory",
+      "prompt": "What are the current Canadian capital gains inclusion rate rules and what planning impact should advisors watch?",
+      "success_rate": 0.5,
+      "avg_latency_ms": 2833,
+      "avg_keyword_hits": 0,
+      "quality_score": 38.67,
+      "run_reasons": [
+        "ok",
+        "no_answer"
+      ],
+      "best_answer_preview": "An error occurred invoking 'knowledge_base_retrieve': BadRequest Message-{\"Message\":\"Could not complete model action. The model endpoint returned status code \\u0027400\\u0027 (BadRequest). The response was filtered due to the prompt triggeri"
+    }
+  ],
+  "all_results": [
+    {
+      "id": "rrsp-deadline",
+      "label": "RRSP limit and deadline",
+      "category": "regulatory",
+      "prompt": "For a Canadian client, what is the RRSP contribution limit and the deadline to claim contributions against the prior tax year?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 3703,
+      "avg_keyword_hits": 3.5,
+      "quality_score": 120.19,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "The RRSP contribution limit for Canadians is determined by the Canada Revenue Agency (CRA) and is based on 18% of your earned income from the previous year, up to a maximum limit set annually by the CRA. The specific dollar amount for the c"
+    },
+    {
+      "id": "rrsp-overview",
+      "label": "RRSP overview",
+      "category": "regulatory",
+      "prompt": "Can you summarize the main rules and benefits of a Registered Retirement Savings Plan in Canada?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 4877,
+      "avg_keyword_hits": 4,
+      "quality_score": 120.49,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "A Registered Retirement Savings Plan (RRSP) in Canada is a retirement savings plan registered with the Canada Revenue Agency (CRA) that allows individuals to contribute funds to save for retirement. Contributions to an RRSP are tax-deductib"
+    },
+    {
+      "id": "tfsa-contrib",
+      "label": "TFSA contributions",
+      "category": "regulatory",
+      "prompt": "How do TFSA contribution room and annual limits work for Canadian residents?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 4838,
+      "avg_keyword_hits": 4.5,
+      "quality_score": 125.65,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "For Canadian residents, the Tax-Free Savings Account (TFSA) contribution room is determined by several factors. Each year, the government sets a TFSA dollar limit, which is the maximum amount you can contribute to your TFSA for that year. F"
+    },
+    {
+      "id": "tfsa-withdraw",
+      "label": "TFSA withdrawals",
+      "category": "regulatory",
+      "prompt": "What happens to TFSA contribution room after a withdrawal, and when can the room be reused?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 2934,
+      "avg_keyword_hits": 4,
+      "quality_score": 128.26,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "After a withdrawal from a Tax-Free Savings Account (TFSA), the contribution room is affected in the following way: the total amount withdrawn from the TFSA in a calendar year is added back to the contribution room at the beginning of the ne"
+    },
+    {
+      "id": "rrif-conversion",
+      "label": "RRSP to RRIF conversion",
+      "category": "regulatory",
+      "prompt": "What are the rules for converting an RRSP to a RRIF, and by what age must that conversion happen?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 3691,
+      "avg_keyword_hits": 3,
+      "quality_score": 115.24,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "In Canada, the conversion of a Registered Retirement Savings Plan (RRSP) to a Registered Retirement Income Fund (RRIF) must occur by the end of the year in which the RRSP holder turns 71 years old. This conversion is necessary to start rece"
+    },
+    {
+      "id": "rrif-min-withdrawal",
+      "label": "RRIF minimum withdrawal",
+      "category": "regulatory",
+      "prompt": "How are RRIF minimum withdrawals determined by age in Canada?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 4715,
+      "avg_keyword_hits": 1,
+      "quality_score": 91.14,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "An error occurred invoking 'knowledge_base_retrieve': TooManyRequests Message-{\"Message\":\"Could not complete model action. The model endpoint returned status code \\u0027429\\u0027 (TooManyRequests). Your requests to gpt-4o for gpt-4o in East"
+    },
+    {
+      "id": "hbp-rules",
+      "label": "Home Buyers Plan",
+      "category": "planning",
+      "prompt": "Can you explain the key Home Buyers' Plan rules for RRSP withdrawals and repayment requirements?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 4768,
+      "avg_keyword_hits": 0,
+      "quality_score": 80.93,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "An error occurred invoking 'knowledge_base_retrieve': TooManyRequests Message-{\"Message\":\"Could not complete model action. The model endpoint returned status code \\u0027429\\u0027 (TooManyRequests). Your requests to gpt-4o for gpt-4o in East"
+    },
+    {
+      "id": "llp-rules",
+      "label": "Lifelong Learning Plan",
+      "category": "planning",
+      "prompt": "How does the Lifelong Learning Plan work for RRSP education withdrawals and repayments?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 6007,
+      "avg_keyword_hits": 5,
+      "quality_score": 125.97,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "The Lifelong Learning Plan (LLP) allows individuals to withdraw funds from their Registered Retirement Savings Plans (RRSPs) to finance education or training for themselves or their spouse/common-law partner. Withdrawals made under the LLP "
+    },
+    {
+      "id": "cpp-timing",
+      "label": "CPP timing",
+      "category": "planning",
+      "prompt": "What are the CPP timing trade-offs between starting benefits at 60, 65, or 70?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 6265,
+      "avg_keyword_hits": 5,
+      "quality_score": 124.94,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "Starting Canada Pension Plan (CPP) benefits at different ages has distinct financial implications:\n\n1. **Starting at Age 60:**\n   - You can begin receiving CPP benefits at age 60, but the monthly amount will be reduced compared to starting "
+    },
+    {
+      "id": "cpp-amount",
+      "label": "CPP amount factors",
+      "category": "planning",
+      "prompt": "What factors determine a client's CPP retirement pension amount?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 4876,
+      "avg_keyword_hits": 5,
+      "quality_score": 130.5,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "The amount of a client's Canada Pension Plan (CPP) retirement pension is determined by several factors:\n\n1. **Age at Retirement**: The age at which you start receiving your pension affects the amount. Starting earlier than age 65 may reduce"
+    },
+    {
+      "id": "oas-basics",
+      "label": "OAS basics",
+      "category": "planning",
+      "prompt": "What are the core OAS eligibility rules and deferral options in Canada?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 4542,
+      "avg_keyword_hits": 5,
+      "quality_score": 131.83,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "To be eligible for the Old Age Security (OAS) pension in Canada, you must be 65 years or older. Service Canada can automatically enroll you for OAS if they have your eligibility information, and they will inform you by mail. If you have not"
+    },
+    {
+      "id": "gis-basics",
+      "label": "GIS basics",
+      "category": "planning",
+      "prompt": "When does the Guaranteed Income Supplement apply, and what income factors matter most?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 4722,
+      "avg_keyword_hits": 5,
+      "quality_score": 131.11,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "The Guaranteed Income Supplement (GIS) applies to individuals who are 65 years or older and are recipients of the Old Age Security (OAS) pension. It is a monthly, tax-free payment designed to assist low-income seniors in Canada [ref_id:0][r"
+    },
+    {
+      "id": "resp-overview",
+      "label": "RESP overview",
+      "category": "planning",
+      "prompt": "Can you summarize RESP contribution basics and how the account is used for post-secondary education savings?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 3507,
+      "avg_keyword_hits": 4,
+      "quality_score": 125.97,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "A Registered Education Savings Plan (RESP) is a contract designed to help save for a child's post-secondary education in Canada. The subscriber, who can be a parent or guardian, makes contributions to the plan, and the promoter agrees to pa"
+    },
+    {
+      "id": "cesg-basics",
+      "label": "CESG basics",
+      "category": "planning",
+      "prompt": "How does the Canada Education Savings Grant work and what are the annual and lifetime grant limits?",
+      "success_rate": 0.5,
+      "avg_latency_ms": 6345,
+      "avg_keyword_hits": 2.5,
+      "quality_score": 49.62,
+      "run_reasons": [
+        "parse_error",
+        "ok"
+      ],
+      "best_answer_preview": "The Canada Education Savings Grant (CESG) is a program that provides additional funds to a Registered Education Savings Plan (RESP) to help save for a child's post-secondary education. The grant matches contributions made to an RESP at a ra"
+    },
+    {
+      "id": "federal-tax-rates",
+      "label": "Federal tax rates",
+      "category": "regulatory",
+      "prompt": "Where can I find the current Canadian federal income tax rates and how should advisors use them in planning?",
+      "success_rate": 1.0,
+      "avg_latency_ms": 3980,
+      "avg_keyword_hits": 5,
+      "quality_score": 134.08,
+      "run_reasons": [
+        "ok",
+        "ok"
+      ],
+      "best_answer_preview": "The current Canadian federal income tax rates can be found through the Government of Canada's official resources, which set these rates for individuals. Each province and territory also determines their own income tax rates, which apply in "
+    },
+    {
+      "id": "capital-gains",
+      "label": "Capital gains inclusion",
+      "category": "regulatory",
+      "prompt": "What are the current Canadian capital gains inclusion rate rules and what planning impact should advisors watch?",
+      "success_rate": 0.5,
+      "avg_latency_ms": 2833,
+      "avg_keyword_hits": 0,
+      "quality_score": 38.67,
+      "run_reasons": [
+        "ok",
+        "no_answer"
+      ],
+      "best_answer_preview": "An error occurred invoking 'knowledge_base_retrieve': BadRequest Message-{\"Message\":\"Could not complete model action. The model endpoint returned status code \\u0027400\\u0027 (BadRequest). The response was filtered due to the prompt triggeri"
+    }
+  ]
+}

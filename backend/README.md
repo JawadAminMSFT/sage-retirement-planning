@@ -55,6 +55,12 @@ A FastAPI-based backend service for AI-powered retirement planning analysis usin
    - `PROJECT_ENDPOINT`: Your Azure AI Projects endpoint
    - `MODEL_DEPLOYMENT_NAME`: Your deployed model name (e.g., gpt-4)
    - Azure authentication credentials
+    - Optional Sage KB MCP settings for advisor chat (MCP-first with automatic fallback):
+       - `SAGE_KB_MCP_URL`: MCP endpoint URL
+       - `SAGE_KB_MCP_API_KEY`: API key for MCP endpoint
+      - `SAGE_KB_MCP_TIMEOUT_SECONDS`: Timeout budget before fallback (default `8`)
+      - `SAGE_KB_MCP_RETRIES`: Retry count for transient transport failures (default `1`)
+      - `SAGE_KB_MCP_TOOL_NAME`: MCP tool name for `tools/call` (default `knowledge_base_retrieve`)
 
 ### Running the Server
 
@@ -88,6 +94,7 @@ uv run pytest tests/ -v
 - `POST /chat` - Main chat interface for retirement planning
 - `GET /scenarios` - Get predefined quick scenario questions
 - `POST /analyze` - Analyze specific retirement scenarios
+- `GET /admin/integrations/mcp-status` - Admin MCP integration diagnostics (configured/reachable/latency)
 
 ### Chat Endpoint Usage
 

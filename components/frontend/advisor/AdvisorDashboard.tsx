@@ -22,7 +22,7 @@ import {
   ArrowRight,
 } from "lucide-react"
 import type { AdvisorProfile, AdvisorDashboardMetrics, ClientProfile, EscalationTicket } from "@/lib/types"
-import { getAdvisorDashboard, getAdvisorClients, getPendingEscalations, generateDailyBrief, MOCK_ADVISOR, MOCK_DASHBOARD_METRICS, getMockScenarioShareEscalations } from "@/lib/advisorApi"
+import { getAdvisorDashboard, getAdvisorClients, getPendingEscalations, generateDailyBrief, MOCK_ADVISOR, MOCK_DASHBOARD_METRICS, getMockScenarioShareEscalations, getWorkIQContext, MOCK_WORKIQ_CONTEXT, type WorkIQContext } from "@/lib/advisorApi"
 import { Card, StatusIndicator, JurisdictionBadge, Skeleton } from "@/components/frontend/shared/UIComponents"
 import { PoweredByLabel } from "@/components/frontend/shared/PoweredByLabel"
 import { getPerformanceForRange, type TimeRange } from "@/lib/mockPortfolio"
@@ -333,6 +333,32 @@ interface BriefMeModalProps {
 const BriefMeModal: React.FC<BriefMeModalProps> = ({ advisor, onClose, isMockMode = true }) => {
   const [isLoading, setIsLoading] = useState(true)
   const [briefContent, setBriefContent] = useState("")
+  const [workiqContext, setWorkiqContext] = useState<WorkIQContext | null>(null)
+
+  useEffect(() => {
+    if (isMockMode) {
+      // In mock mode, use inline mock data — no backend call needed
+      setWorkiqContext(MOCK_WORKIQ_CONTEXT)
+      return
+    }
+    // In live mode, poll backend until WorkIQ data arrives (prefetch may still be running)
+    let cancelled = false
+    const poll = async () => {
+      try {
+        const ctx = await getWorkIQContext()
+        if (!cancelled) setWorkiqContext(ctx)
+        // If enabled but no data yet, retry after a short delay
+        if (ctx.workiq_enabled && !ctx.sage_emails && !ctx.sage_meetings && !cancelled) {
+          setTimeout(poll, 5000)
+        }
+      } catch {
+        // ignore — will retry
+        if (!cancelled) setTimeout(poll, 5000)
+      }
+    }
+    poll()
+    return () => { cancelled = true }
+  }, [isMockMode])
 
   useEffect(() => {
     const mockBrief = `## 📅 Today's Schedule
@@ -500,6 +526,38 @@ const BriefMeModal: React.FC<BriefMeModalProps> = ({ advisor, onClose, isMockMod
               )
             })
           )}
+          
+          {/* WorkIQ-sourced content (emails, meetings from M365) */}
+          {workiqContext?.workiq_enabled && (workiqContext.sage_emails || workiqContext.sage_meetings) && (
+            <div className="bg-white border border-blue-200 rounded-xl overflow-hidden shadow-sm">
+              <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2.5 flex items-center gap-2">
+                <Bell className="w-4 h-4 text-white" />
+                <h3 className="text-sm font-semibold text-white">From Your Inbox</h3>
+                <span className="ml-auto text-xs text-blue-200">via Work IQ</span>
+              </div>
+              <div className="px-4 py-3 space-y-3 text-sm text-gray-600 max-h-48 overflow-y-auto">
+                {workiqContext.sage_emails && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Recent Sage Emails</p>
+                    <div className="bg-blue-50 rounded-lg p-3 text-gray-700 whitespace-pre-wrap text-xs leading-relaxed">
+                      {workiqContext.sage_emails.slice(0, 500)}
+                      {workiqContext.sage_emails.length > 500 && "..."}
+                    </div>
+                  </div>
+                )}
+                {workiqContext.sage_meetings && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Sage Meeting Info</p>
+                    <div className="bg-blue-50 rounded-lg p-3 text-gray-700 whitespace-pre-wrap text-xs leading-relaxed">
+                      {workiqContext.sage_meetings.slice(0, 800)}
+                      {workiqContext.sage_meetings.length > 800 && "..."}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
           {isLoading && cards.length > 0 && (
             <div className="flex items-center gap-2 text-sm text-gray-400 justify-center py-2">
               <Loader2 className="w-4 h-4 animate-spin" /> Loading...

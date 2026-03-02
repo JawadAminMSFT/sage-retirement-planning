@@ -5,6 +5,13 @@ FastAPI router for admin-specific endpoints (product catalog, compliance, users)
 
 from typing import Optional, List
 from datetime import datetime
+import asyncio
+import os
+import json
+import time
+from pathlib import Path
+from urllib import request as urllib_request
+from urllib import error as urllib_error
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
@@ -98,6 +105,86 @@ class AdminDashboardMetrics(BaseModel):
     active_regulatory_rules: int
 
 
+class MCPIntegrationStatus(BaseModel):
+    configured: bool
+    auth_configured: bool
+    endpoint_host: Optional[str] = None
+    source: str
+    reachable: bool
+    http_status: Optional[int] = None
+    latency_ms: Optional[int] = None
+    status: str
+    reason: Optional[str] = None
+
+
+def _load_sage_kb_mcp_config() -> dict:
+    url = os.environ.get("SAGE_KB_MCP_URL", "")
+    api_key = os.environ.get("SAGE_KB_MCP_API_KEY", "")
+    source = "env"
+
+    if not url:
+        workspace_mcp = Path(__file__).resolve().parent.parent / ".vscode" / "mcp.json"
+        try:
+            with open(workspace_mcp, "r", encoding="utf-8") as f:
+                config = json.load(f)
+            server = config.get("servers", {}).get("sage-advisor-kb", {})
+            headers = server.get("headers", {}) if isinstance(server.get("headers", {}), dict) else {}
+            url = server.get("url", "")
+            api_key = api_key or headers.get("api-key", "")
+            source = "workspace"
+        except Exception:
+            source = "none"
+
+    return {
+        "url": url,
+        "api_key": api_key,
+        "source": source,
+        "timeout_seconds": float(os.environ.get("SAGE_KB_MCP_HEALTH_TIMEOUT_SECONDS", "3")),
+    }
+
+
+def _probe_mcp_endpoint(url: str, api_key: str, timeout_seconds: float) -> dict:
+    req = urllib_request.Request(url=url, method="GET")
+    req.add_header("Accept", "application/json")
+    if api_key:
+        req.add_header("api-key", api_key)
+
+    started = time.perf_counter()
+    try:
+        with urllib_request.urlopen(req, timeout=timeout_seconds) as response:
+            elapsed = int((time.perf_counter() - started) * 1000)
+            return {
+                "reachable": True,
+                "http_status": getattr(response, "status", 200),
+                "latency_ms": elapsed,
+                "reason": None,
+            }
+    except urllib_error.HTTPError as e:
+        elapsed = int((time.perf_counter() - started) * 1000)
+        return {
+            "reachable": True,
+            "http_status": e.code,
+            "latency_ms": elapsed,
+            "reason": f"HTTP {e.code}",
+        }
+    except urllib_error.URLError as e:
+        elapsed = int((time.perf_counter() - started) * 1000)
+        return {
+            "reachable": False,
+            "http_status": None,
+            "latency_ms": elapsed,
+            "reason": str(e.reason),
+        }
+    except Exception as e:
+        elapsed = int((time.perf_counter() - started) * 1000)
+        return {
+            "reachable": False,
+            "http_status": None,
+            "latency_ms": elapsed,
+            "reason": str(e),
+        }
+
+
 # ─── Admin Profile Endpoints ─────────────────────────────────────────────────
 
 @router.get("/{admin_id}", response_model=AdminProfile)
@@ -139,6 +226,47 @@ async def get_admin_dashboard():
         high_risk_reviews=len(high_risk_reviews),
         active_products=active_products,
         active_regulatory_rules=len([r for r in regulatory_rules if r.is_active]),
+    )
+
+
+@router.get("/integrations/mcp-status", response_model=MCPIntegrationStatus)
+async def get_mcp_integration_status():
+    """Get Sage KB MCP integration status for admin diagnostics."""
+    config = _load_sage_kb_mcp_config()
+    url = config.get("url", "")
+    api_key = config.get("api_key", "")
+    source = config.get("source", "none")
+
+    if not url:
+        return MCPIntegrationStatus(
+            configured=False,
+            auth_configured=bool(api_key),
+            endpoint_host=None,
+            source=source,
+            reachable=False,
+            status="not_configured",
+            reason="MCP endpoint URL not configured",
+        )
+
+    endpoint_host = url.split("//", 1)[-1].split("/", 1)[0]
+    probe = await asyncio.to_thread(
+        _probe_mcp_endpoint,
+        url,
+        api_key,
+        float(config.get("timeout_seconds", 3.0)),
+    )
+
+    status = "ok" if probe["reachable"] else "degraded"
+    return MCPIntegrationStatus(
+        configured=True,
+        auth_configured=bool(api_key),
+        endpoint_host=endpoint_host,
+        source=source,
+        reachable=probe["reachable"],
+        http_status=probe["http_status"],
+        latency_ms=probe["latency_ms"],
+        status=status,
+        reason=probe["reason"],
     )
 
 

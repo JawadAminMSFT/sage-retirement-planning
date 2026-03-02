@@ -115,6 +115,12 @@ class RegulatoryCategory(str, Enum):
     AGE_REQUIREMENTS = "age_requirements"
 
 
+class DataSourceMode(str, Enum):
+    """Data source for client persona queries."""
+    LOCAL = "local"      # Default live mode — uses Azure AI Agent with local profile data
+    FABRIC = "fabric"    # Live mode — queries Fabric Data Agent for client/portfolio data
+
+
 class AccountType(str, Enum):
     # US accounts
     TRADITIONAL_401K = "401k"

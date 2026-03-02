@@ -1,8 +1,8 @@
 "use client"
 
 import React from "react"
-import { ChevronDown, Settings } from "lucide-react"
-import type { UserProfile, ApiMode } from "@/lib/api"
+import { ChevronDown, Settings, Database, Cloud } from "lucide-react"
+import type { UserProfile, ApiMode, DataSourceMode } from "@/lib/api"
 import { formatCurrency } from "@/lib/analysis"
 
 interface ProfileBubbleProps {
@@ -12,6 +12,12 @@ interface ProfileBubbleProps {
   onToggleBubble: () => void
   onModeChange: (mode: ApiMode) => void
   onOpenProfileModal: () => void
+  /** Current data source for live mode (client persona only) */
+  dataSourceMode?: DataSourceMode
+  /** Callback when data source is changed */
+  onDataSourceChange?: (mode: DataSourceMode) => void
+  /** Whether the Fabric Data Agent is available (configured on backend) */
+  fabricAvailable?: boolean
 }
 
 export const ProfileBubble: React.FC<ProfileBubbleProps> = ({
@@ -21,6 +27,9 @@ export const ProfileBubble: React.FC<ProfileBubbleProps> = ({
   onToggleBubble,
   onModeChange,
   onOpenProfileModal,
+  dataSourceMode = "local",
+  onDataSourceChange,
+  fabricAvailable = false,
 }) => {
   return (
     <div className="relative">
@@ -39,10 +48,10 @@ export const ProfileBubble: React.FC<ProfileBubbleProps> = ({
           </span>
           <div className="flex items-center gap-1.5">
             <div
-              className={`w-1.5 h-1.5 rounded-full ${isMockMode ? "bg-amber-500" : "bg-green-500"}`}
+              className={`w-1.5 h-1.5 rounded-full ${isMockMode ? "bg-amber-500" : dataSourceMode === "fabric" ? "bg-blue-500" : "bg-green-500"}`}
             />
             <span className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">
-              {isMockMode ? "Demo" : "Live"}
+              {isMockMode ? "Demo" : dataSourceMode === "fabric" ? "Fabric" : "Live"}
             </span>
           </div>
         </div>
@@ -120,6 +129,48 @@ export const ProfileBubble: React.FC<ProfileBubbleProps> = ({
                   : "Connected to Azure AI backend"}
               </p>
             </div>
+
+            {/* Data Source selector — only shown in Live mode */}
+            {!isMockMode && onDataSourceChange && (
+              <div className="px-5 py-3 border-t border-gray-100">
+                <span className="text-[10px] text-gray-400 uppercase tracking-wider font-medium mb-2 block">
+                  Data Source
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => onDataSourceChange("local")}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                      dataSourceMode === "local"
+                        ? "bg-green-50 text-green-700 ring-1 ring-green-200"
+                        : "bg-gray-50 text-gray-500 hover:bg-gray-100"
+                    }`}
+                  >
+                    <Database className="w-3.5 h-3.5" />
+                    Local
+                  </button>
+                  <button
+                    onClick={() => onDataSourceChange("fabric")}
+                    disabled={!fabricAvailable}
+                    title={fabricAvailable ? "Query Fabric Data Agent" : "Fabric Data Agent not configured"}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                      dataSourceMode === "fabric"
+                        ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200"
+                        : fabricAvailable
+                        ? "bg-gray-50 text-gray-500 hover:bg-gray-100"
+                        : "bg-gray-50 text-gray-300 cursor-not-allowed"
+                    }`}
+                  >
+                    <Cloud className="w-3.5 h-3.5" />
+                    Fabric
+                  </button>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1.5">
+                  {dataSourceMode === "fabric"
+                    ? "Querying Microsoft Fabric Data Agent"
+                    : "Using local profile data"}
+                </p>
+              </div>
+            )}
 
             {/* Actions */}
             <div className="px-3 py-2 border-t border-gray-100">

@@ -23,7 +23,10 @@ import {
 import {
   getUserProfiles,
   type ApiMode,
+  type DataSourceMode,
   setApiMode,
+  setDataSourceMode,
+  checkFabricHealth,
   type UserProfile,
 } from "../lib/api"
 import type { UserRole, AdvisorProfile, ClientProfile, AppView } from "@/lib/types"
@@ -44,7 +47,7 @@ import { AdvisorChatView } from "@/components/frontend/advisor/AdvisorChatView"
 import { AdvisorScenarioView } from "@/components/frontend/advisor/AdvisorScenarioView"
 import { AdminDashboard } from "@/components/frontend/admin/AdminDashboard"
 import { SageChatPane, SageFloatingButton } from "@/components/frontend/shared/SageChatPane"
-import { getMockClientsForAdvisor } from "@/lib/advisorApi"
+import { getMockClientsForAdvisor, prefetchWorkIQContext } from "@/lib/advisorApi"
 import { getPortfolioData } from "@/lib/mockPortfolio"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -107,6 +110,10 @@ export default function RetirementPlanningApp() {
   const [showProfileBubble, setShowProfileBubble] = useState(false)
   const [availableProfiles, setAvailableProfiles] = useState<UserProfile[]>([])
   const [isChatPaneOpen, setIsChatPaneOpen] = useState(false)
+  
+  // Fabric Data Agent state (client persona only)
+  const [dataSourceMode, setDataSourceModeState] = useState<DataSourceMode>("local")
+  const [fabricAvailable, setFabricAvailable] = useState(false)
 
   // Get current nav items based on persona
   const navItems = currentPersona === "client" 
@@ -156,6 +163,14 @@ export default function RetirementPlanningApp() {
         const profiles = await getUserProfiles()
         setAvailableProfiles(profiles)
         if (!selectedProfile && profiles.length > 0) setSelectedProfile(profiles[0])
+        
+        // Pre-fetch WorkIQ context in background (non-blocking)
+        prefetchWorkIQContext()
+        
+        // Check Fabric Data Agent availability (non-blocking)
+        checkFabricHealth().then((result) => {
+          setFabricAvailable(result.status === "ok")
+        }).catch(() => setFabricAvailable(false))
       } catch (error) {
         console.error("Failed to load initial data:", error)
       }
@@ -199,6 +214,11 @@ export default function RetirementPlanningApp() {
     setApiMode(mode)
     setIsMockMode(mode === "mock")
     setShowProfileBubble(false)
+  }
+
+  const handleDataSourceChange = (ds: DataSourceMode) => {
+    setDataSourceModeState(ds)
+    setDataSourceMode(ds)  // sync to api.ts global
   }
 
   // Handle advisor client selection
@@ -406,6 +426,43 @@ export default function RetirementPlanningApp() {
                           </button>
                         </div>
                       </div>
+                      
+                      {/* Data Source selector — client persona, live mode only */}
+                      {currentPersona === "client" && !isMockMode && (
+                        <div className="p-2 border-b border-gray-100">
+                          <div className="px-2">
+                            <span className="text-[10px] text-gray-400 uppercase tracking-wider font-medium mb-1.5 block">
+                              Data Source
+                            </span>
+                            <div className="flex gap-1.5">
+                              <button
+                                onClick={() => handleDataSourceChange("local")}
+                                className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                  dataSourceMode === "local"
+                                    ? "bg-green-50 text-green-700 ring-1 ring-green-200"
+                                    : "bg-gray-50 text-gray-500 hover:bg-gray-100"
+                                }`}
+                              >
+                                Local
+                              </button>
+                              <button
+                                onClick={() => handleDataSourceChange("fabric")}
+                                disabled={!fabricAvailable}
+                                title={fabricAvailable ? "Query Fabric Data Agent" : "Fabric Data Agent not configured"}
+                                className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                  dataSourceMode === "fabric"
+                                    ? "bg-blue-50 text-blue-700 ring-1 ring-blue-200"
+                                    : fabricAvailable
+                                    ? "bg-gray-50 text-gray-500 hover:bg-gray-100"
+                                    : "bg-gray-50 text-gray-300 cursor-not-allowed"
+                                }`}
+                              >
+                                Fabric
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       
                       {/* Advisor Selection - only show in advisor mode */}
                       {currentPersona === "advisor" && (

@@ -1,11 +1,13 @@
 # 🌿 Sage Retirement Planning
 
-**An AI-powered retirement planning assistant that helps users explore "What If" scenarios and make informed financial decisions.**
+**A Microsoft accelerator for AI-powered retirement planning — the first application to integrate Work IQ, Foundry IQ, and Fabric IQ into a single full-stack experience.**
 
 [![Next.js](https://img.shields.io/badge/Next.js-15.2-black?logo=next.js)](https://nextjs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Python-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
 [![Azure AI](https://img.shields.io/badge/Azure%20AI-Agents-0078D4?logo=microsoft-azure)](https://azure.microsoft.com/en-us/products/ai-services/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+
+> **Triple IQ Integration** — Sage combines **Work IQ** (Microsoft 365 context via MCP), **Foundry IQ** (Azure AI Search knowledge base via MCP), and **Fabric IQ** (Microsoft Fabric Data Agent for lakehouse analytics) to deliver a uniquely intelligent financial planning experience that no other accelerator offers.
 
 ---
 
@@ -34,6 +36,16 @@ One-click example scenarios to explore common retirement planning questions:
 - **Mock Mode**: Fully functional demo without Azure credentials
 - **Live Mode**: Connect to Azure AI for real LLM-powered analysis
 
+### 🧠 Triple IQ Integration (Differentiator)
+
+| IQ Service | What It Does | Protocol |
+|------------|-------------|----------|
+| **Work IQ** | Pulls calendar, emails, files from Microsoft 365 to enrich advisor context (upcoming client meetings, recent correspondence, shared documents) | Local MCP via CLI |
+| **Foundry IQ** | Retrieves grounded knowledge from an Azure AI Search knowledge base for advisor chat (compliance rules, product details, regulatory guidance) | Cloud MCP (Azure AI Search) |
+| **Fabric IQ** | Queries a Microsoft Fabric Data Agent backed by a lakehouse for real client/portfolio analytics during what-if scenarios | OpenAI Assistants API via SPN |
+
+All three are **optional and gracefully degrade** — the app works fully in mock mode with none of them configured.
+
 ---
 
 ## 🏗️ Architecture
@@ -50,21 +62,23 @@ One-click example scenarios to explore common retirement planning questions:
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                      Backend (FastAPI)                          │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐  │
-│  │   /chat     │  │  /project-  │  │   Azure AI Agents       │  │
-│  │  endpoint   │  │   scenario  │  │   Integration           │  │
-│  └─────────────┘  └─────────────┘  └─────────────────────────┘  │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    Azure AI Foundry                             │
-│  ┌─────────────────────────────────────────────────────────┐    │
-│  │  GPT-4.1 Agent with Financial Planning Tools            │    │
-│  │  • Cashflow Analysis  • Portfolio Projection            │    │
-│  │  • Risk Assessment    • Tax Optimization                │    │
-│  └─────────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────────┘
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌───────────┐  │
+│  │  /chat     │  │ /project-  │  │ /advisor/* │  │ /api/     │  │
+│  │  endpoint  │  │  scenario  │  │ WorkIQ+MCP │  │ fabric/*  │  │
+│  └────────────┘  └────────────┘  └────────────┘  └───────────┘  │
+└──────┬─────────────────┬────────────────┬──────────────┬────────┘
+       │                 │                │              │
+       ▼                 ▼                ▼              ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────┐  ┌──────────────┐
+│  Azure AI    │  │  Foundry IQ  │  │ Work IQ  │  │  Fabric IQ   │
+│  Foundry     │  │  (AI Search  │  │ (M365    │  │  (Data Agent │
+│  GPT-4.1     │  │   MCP KB)    │  │  MCP)    │  │   Lakehouse) │
+│  Agent       │  │              │  │          │  │              │
+│  • Cashflow  │  │  Compliance  │  │ Calendar │  │  Client &    │
+│  • Portfolio │  │  Products    │  │ Emails   │  │  Portfolio   │
+│  • Risk      │  │  Regulations │  │ Files    │  │  Analytics   │
+│  • Tax       │  │  Guidance    │  │ Meetings │  │  SQL + NL    │
+└──────────────┘  └──────────────┘  └──────────┘  └──────────────┘
 ```
 
 ---
@@ -75,6 +89,9 @@ One-click example scenarios to explore common retirement planning questions:
 - Node.js 18+ and pnpm
 - Python 3.11+ and uv
 - (Optional) Azure AI Foundry project for live mode
+- (Optional) Azure AI Search instance for Foundry IQ
+- (Optional) Microsoft Fabric workspace with a published Data Agent for Fabric IQ
+- (Optional) Work IQ CLI with local auth tokens for Work IQ
 
 ### 1. Clone and Install
 
@@ -92,13 +109,41 @@ uv sync
 
 ### 2. Configure Environment
 
-```bash
-# Copy example env file
-cp .env.example .env
+Copy the example env and fill in values for the capabilities you want:
 
-# For live mode, add your Azure credentials:
-# PROJECT_ENDPOINT=https://your-ai-foundry.services.ai.azure.com/...
-# AZURE_OPENAI_KEY=your-key
+```bash
+cp .env.example backend/.env
+```
+
+**Core (required for live mode):**
+```env
+PROJECT_ENDPOINT=https://your-ai-foundry.services.ai.azure.com/api/projects/your-project
+MODEL_DEPLOYMENT_NAME=gpt-4.1
+DEMO_TENANT_ID=<your-azure-ad-tenant-id>   # if az cli targets a different tenant
+```
+
+**Foundry IQ — Azure AI Search Knowledge Base (MCP):**
+```env
+SAGE_KB_MCP_URL=https://<your-search>.search.windows.net/knowledgebases/<kb-name>/mcp?api-version=2025-11-01-preview
+SAGE_KB_MCP_API_KEY=<your-search-api-key>
+SAGE_KB_MCP_TOOL_NAME=knowledge_base_retrieve
+SAGE_KB_MCP_TIMEOUT_SECONDS=8
+SAGE_KB_MCP_RETRIES=1
+```
+
+**Fabric IQ — Microsoft Fabric Data Agent (SPN):**
+```env
+FABRIC_TENANT_ID=<fabric-tenant-id>
+FABRIC_CLIENT_ID=<spn-application-client-id>
+FABRIC_CLIENT_SECRET=<spn-client-secret>
+FABRIC_DATA_AGENT_URL=https://api.fabric.microsoft.com/v1/workspaces/<ws-id>/dataagents/<agent-id>/aiassistant/openai
+FABRIC_DATA_AGENT_ID=<published-assistant-id>
+```
+
+**Work IQ — Microsoft 365 Context (local MCP CLI):**
+```env
+# "local" = live queries via WorkIQ CLI  |  "mock" = static data  |  "disabled" = off
+WORKIQ_MODE=local
 ```
 
 ### 3. Run the Application
@@ -158,7 +203,10 @@ python tests/test_projection_live.py
 |-------|------------|
 | **Frontend** | Next.js 15, React 19, TypeScript, Tailwind CSS |
 | **Backend** | FastAPI, Python 3.11+, uv |
-| **AI** | Azure AI Agents, GPT-4.1 |
+| **AI** | Azure AI Foundry Agents (GPT-4.1) |
+| **Work IQ** | Microsoft 365 MCP integration (calendar, email, files) via local CLI |
+| **Foundry IQ** | Azure AI Search Knowledge Base via cloud MCP |
+| **Fabric IQ** | Microsoft Fabric Data Agent via OpenAI Assistants API (SPN auth) |
 | **Styling** | Tailwind CSS, Lucide Icons |
 | **Testing** | Python unittest, Live API tests |
 
@@ -183,14 +231,77 @@ sage-retirement-planning/
 │   └── mockPortfolio.ts   # Sample portfolio data
 ├── backend/
 │   ├── main.py            # FastAPI server
+│   ├── workiq_service.py  # Work IQ integration (M365 MCP)
+│   ├── fabric_service.py  # Fabric IQ integration (Data Agent)
 │   ├── pyproject.toml     # Python dependencies
-│   └── data/              # User profiles & products
+│   └── data/              # User profiles, products, mock data
+├── scripts/
+│   └── workiq-check/      # Work IQ CLI query script
+├── skills/
+│   └── azure-container-apps/  # Deployment skill (ACA)
+├── docs/
+│   ├── FABRIC_INTEGRATION.md  # Fabric IQ setup guide
+│   └── ADVISOR_VIEW_SPEC.md   # Advisor view specification
 ├── tests/
 │   ├── test_regression.py
 │   ├── test_projection_api.py
 │   └── test_projection_live.py
-└── .env.example           # Environment template
+└── .env.example           # Environment template (all IQ vars)
 ```
+
+---
+
+---
+
+## 🔌 IQ Integration Setup
+
+### Foundry IQ (Azure AI Search MCP Knowledge Base)
+
+Foundry IQ gives the advisor chat grounded knowledge from a curated knowledge base (compliance rules, product sheets, regulatory guidance).
+
+1. **Create an Azure AI Search resource** in your Azure subscription
+2. **Create a Knowledge Base** in the Azure AI Search resource with your advisor content (documents, PDFs, etc.)
+3. **Enable the MCP endpoint** — the knowledge base exposes an MCP-compatible endpoint at:
+   ```
+   https://<search-name>.search.windows.net/knowledgebases/<kb-name>/mcp?api-version=2025-11-01-preview
+   ```
+4. **Set environment variables** in `backend/.env`:
+   ```env
+   SAGE_KB_MCP_URL=https://<search-name>.search.windows.net/knowledgebases/<kb-name>/mcp?api-version=2025-11-01-preview
+   SAGE_KB_MCP_API_KEY=<your-admin-or-query-api-key>
+   SAGE_KB_MCP_TOOL_NAME=knowledge_base_retrieve
+   ```
+5. The advisor chat will automatically use MCP-first retrieval with fallback to the AI agent if MCP is unavailable.
+
+### Fabric IQ (Microsoft Fabric Data Agent)
+
+Fabric IQ enables natural-language queries against a Fabric Lakehouse containing client and portfolio data.
+
+1. **Set up a Fabric workspace** with a Lakehouse containing your client/portfolio tables
+2. **Create and publish a Data Agent** in the Fabric workspace (see [docs/FABRIC_INTEGRATION.md](docs/FABRIC_INTEGRATION.md) for step-by-step)
+3. **Register a Service Principal (SPN)** in the Fabric tenant with Contributor access to the workspace
+4. **Set environment variables** in `backend/.env`:
+   ```env
+   FABRIC_TENANT_ID=<fabric-aad-tenant-id>
+   FABRIC_CLIENT_ID=<spn-app-client-id>
+   FABRIC_CLIENT_SECRET=<spn-client-secret>
+   FABRIC_DATA_AGENT_URL=https://api.fabric.microsoft.com/v1/workspaces/<ws-id>/dataagents/<agent-id>/aiassistant/openai
+   FABRIC_DATA_AGENT_ID=<published-assistant-id>
+   ```
+5. The client persona in Live mode will show a **Live (Fabric)** data source option for what-if analysis.
+
+### Work IQ (Microsoft 365 Context via MCP)
+
+Work IQ enriches the advisor experience with real-time Microsoft 365 context: today's calendar, recent emails about clients, shared files.
+
+1. **Install the Work IQ CLI** and authenticate with your Microsoft 365 account locally
+2. **Place the MCP query script** at `scripts/workiq-check/query.mjs` (included in the repo)
+3. **Set environment variable** in `backend/.env`:
+   ```env
+   WORKIQ_MODE=local    # "local" for live CLI queries, "mock" for static demo data, "disabled" to turn off
+   ```
+4. On startup, the backend pre-fetches calendar, email, meeting, and file context into an in-memory cache (5-min TTL).
+5. For cloud deployments where the CLI is not available, use `WORKIQ_MODE=mock` to serve bundled demo data from `backend/data/workiq_mock.json`.
 
 ---
 
@@ -200,6 +311,9 @@ sage-retirement-planning/
 - ✅ Environment variables for all credentials
 - ✅ `.env` files are gitignored
 - ✅ Input validation on all API endpoints
+- ✅ Fabric IQ uses SPN (ClientSecretCredential) — isolated from user az cli auth
+- ✅ Foundry IQ uses API key scoped to the search resource
+- ✅ Work IQ runs only locally with user's own M365 auth tokens
 
 ---
 
@@ -216,5 +330,5 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ---
 
 <p align="center">
-  <strong>Built with ❤️ using Azure AI Foundry</strong>
+  <strong>Built with ❤️ using Azure AI Foundry, Azure AI Search, Microsoft Fabric & Work IQ</strong>
 </p>

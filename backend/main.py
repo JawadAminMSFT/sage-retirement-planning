@@ -9,9 +9,12 @@ import json
 import time
 import asyncio
 import uuid
+import re
 from typing import Any, List, Dict, Optional
 from datetime import datetime
 from pathlib import Path
+from urllib import request as urllib_request
+from urllib import error as urllib_error
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
@@ -29,8 +32,38 @@ from storage import (
     ScenarioShareRecord,
 )
 
+# WorkIQ MCP integration (optional, graceful fallback)
+try:
+    from workiq_service import (
+        prefetch_workiq_background,
+        prefetch_workiq_context,
+        get_cached_context,
+        get_cached_meetings,
+        get_cached_emails,
+        get_cached_calendar,
+        query_workiq,
+        WORKIQ_MODE,
+    )
+except ImportError:
+    WORKIQ_MODE = "disabled"
+    async def prefetch_workiq_background(): pass
+    async def prefetch_workiq_context(): return {}
+    def get_cached_context(): return {"workiq_enabled": False, "workiq_mode": "disabled"}
+    def get_cached_meetings(): return None
+    def get_cached_emails(): return None
+    def get_cached_calendar(): return None
+    async def query_workiq(q, k=None): return {"success": False, "error": "WorkIQ not available"}
+
+# Fabric Data Agent integration (optional, graceful fallback)
+try:
+    from fabric_service import fabric_client, FABRIC_AVAILABLE, build_fabric_enriched_prompt
+except ImportError:
+    FABRIC_AVAILABLE = False
+    fabric_client = None
+    def build_fabric_enriched_prompt(*a, **kw): return ""
+
 # Azure AI Agents imports
-from azure.identity import DefaultAzureCredential
+from azure.identity import DefaultAzureCredential, AzureCliCredential
 from azure.ai.agents import AgentsClient
 from azure.ai.agents.models import (
   AgentEventHandler,
@@ -86,7 +119,14 @@ ENABLE_EVALUATIONS = True  # Enable for agent evaluation feature
 DATA_DIR = Path(__file__).parent / "data"
 
 # Initialize Azure AI client
-credential = DefaultAzureCredential()
+# Use tenant-specific credential if DEMO_TENANT_ID is set, so the app works
+# even when az cli is logged into a different tenant (e.g. corporate tenant for WorkIQ)
+demo_tenant_id = os.environ.get("DEMO_TENANT_ID", "")
+if demo_tenant_id:
+    print(f"Using AzureCliCredential with demo tenant: {demo_tenant_id}")
+    credential = AzureCliCredential(tenant_id=demo_tenant_id)
+else:
+    credential = DefaultAzureCredential()
 agents_client = AgentsClient(
   endpoint=project_endpoint,
   credential=credential,
@@ -319,6 +359,7 @@ class ChatRequest(BaseModel):
   message: str
   profile: Optional[UserProfile] = None
   history: List[ChatMessage] = []
+  data_source: Optional[str] = None  # "local" (default) or "fabric"
 
 class ChatResponse(BaseModel):
   response: str
@@ -576,40 +617,48 @@ thread_manager = ThreadManager(agents_client)
 # Agent setup
 def setup_agent():
   """Initialize or find the retirement planning agent"""
-  functions = FunctionTool(user_functions)
-  tools = functions.definitions
-  
   try:
-      code_interpreter = CodeInterpreterTool()
-      tools.extend(code_interpreter.definitions)
+      functions = FunctionTool(user_functions)
+      tools = functions.definitions
+      
+      try:
+          code_interpreter = CodeInterpreterTool()
+          tools.extend(code_interpreter.definitions)
+      except Exception as e:
+          print(f"CodeInterpreter not available: {e}")
+      
+      # Try to find existing agent
+      try:
+          agents = agents_client.list_agents()
+          for existing_agent in agents:
+              if existing_agent.name == agent_name:
+                  return agents_client.update_agent(
+                      agent_id=existing_agent.id,
+                      model=model_deployment_name,
+                      instructions=SYSTEM_INSTRUCTIONS,
+                      tools=tools,
+                  ), functions
+      except Exception as e:
+          print(f"Could not list agents: {e}")
+      
+      # Create new agent
+      new_agent = agents_client.create_agent(
+          model=model_deployment_name,
+          name=agent_name,
+          instructions=SYSTEM_INSTRUCTIONS,
+          tools=tools,
+      )
+      return new_agent, functions
   except Exception as e:
-      print(f"CodeInterpreter not available: {e}")
-  
-  # Try to find existing agent
-  try:
-      agents = agents_client.list_agents()
-      for agent in agents:
-          if agent.name == agent_name:
-              return agents_client.update_agent(
-                  agent_id=agent.id,
-                  model=model_deployment_name,
-                  instructions=SYSTEM_INSTRUCTIONS,
-                  tools=tools,
-              ), functions
-  except Exception as e:
-      print(f"Could not list agents: {e}")
-  
-  # Create new agent
-  agent = agents_client.create_agent(
-      model=model_deployment_name,
-      name=agent_name,
-      instructions=SYSTEM_INSTRUCTIONS,
-      tools=tools,
-  )
-  return agent, functions
+      print(f"Could not initialize Azure AI Agent (tenant mismatch or service unavailable): {e}")
+      print("Agent-based chat features will be disabled. Other features will work normally.")
+      return None, None
 
 # Initialize agent
-agent, functions = setup_agent()
+_agent_result = setup_agent()
+agent = _agent_result[0] if _agent_result else None
+functions = _agent_result[1] if _agent_result else None
+AGENT_AVAILABLE = agent is not None
 
 # Evaluation Configuration
 def setup_evaluators():
@@ -771,7 +820,43 @@ async def root():
 
 @app.get("/health")
 async def health():
-  return {"status": "healthy", "agent_id": agent.id}
+  return {
+      "status": "healthy",
+      "agent_id": agent.id if agent else None,
+      "agent_available": AGENT_AVAILABLE
+  }
+
+
+# ─── Fabric Data Agent Endpoints ──────────────────────────────────────────────
+
+@app.get("/api/fabric/health")
+async def fabric_health():
+    """Check Fabric Data Agent connectivity and SPN token acquisition."""
+    return fabric_client.health_check()
+
+
+@app.post("/api/fabric/query")
+async def fabric_query(request: dict):
+    """
+    Direct query to Fabric Data Agent.
+    Body: { "question": "Show me Sarah Chen's portfolio" }
+    Returns the raw Fabric Data Agent response.
+    """
+    if not FABRIC_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="Fabric Data Agent is not configured. Set the required environment variables.",
+        )
+    question = request.get("question", "")
+    if not question:
+        raise HTTPException(status_code=400, detail="'question' field is required")
+
+    try:
+        result = await fabric_client.query(question)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Fabric query failed: {str(e)}")
+
 
 @app.get("/profiles", response_model=ProfilesResponse)
 async def get_profiles():
@@ -995,6 +1080,7 @@ class AdvisorChatRequest(BaseModel):
     advisor_id: str
     context: Optional[Dict[str, Any]] = None
     history: Optional[List[ChatMessage]] = []
+    skip_mcp: bool = False  # Skip MCP KB lookup; use AI agent directly (for generation tasks)
 
 
 class PreMeetingBriefRequest(BaseModel):
@@ -1137,6 +1223,68 @@ async def generate_pre_meeting_brief_endpoint(request: PreMeetingBriefRequest):
     except Exception as e:
         print(f"Pre-meeting brief error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─── WorkIQ MCP Integration ──────────────────────────────────────────────────
+
+@app.post("/advisor/workiq/prefetch")
+async def workiq_prefetch():
+    """
+    Trigger background pre-fetch of WorkIQ context (calendar, emails, files).
+    Called on app startup to warm the cache. Non-blocking.
+    """
+    if WORKIQ_MODE == "disabled":
+        return {"status": "disabled", "message": "WorkIQ integration is disabled"}
+    
+    await prefetch_workiq_background()
+    return {"status": "started", "message": "WorkIQ prefetch started in background"}
+
+
+@app.get("/advisor/workiq/context")
+async def workiq_get_context():
+    """
+    Get cached WorkIQ context. Returns empty values if cache is cold or WorkIQ unavailable.
+    Frontend uses this to enrich advisor views without blocking.
+    """
+    return get_cached_context()
+
+
+@app.get("/advisor/workiq/meetings")
+async def workiq_get_meetings():
+    """Get cached Sage meeting info for appointments view."""
+    return {
+        "workiq_enabled": WORKIQ_MODE != "disabled",
+        "workiq_mode": WORKIQ_MODE,
+        "data": get_cached_meetings(),
+    }
+
+
+@app.get("/advisor/workiq/emails")
+async def workiq_get_emails():
+    """Get cached Sage email subjects for escalations view."""
+    return {
+        "workiq_enabled": WORKIQ_MODE != "disabled",
+        "workiq_mode": WORKIQ_MODE,
+        "data": get_cached_emails(),
+    }
+
+
+class WorkIQQueryRequest(BaseModel):
+    question: str
+    cache_key: Optional[str] = None
+
+
+@app.post("/advisor/workiq/query")
+async def workiq_query(request: WorkIQQueryRequest):
+    """
+    On-demand WorkIQ query with optional caching.
+    Use sparingly - prefer prefetched cache for UI responsiveness.
+    """
+    if WORKIQ_MODE == "disabled":
+        return {"success": False, "error": "WorkIQ disabled", "response": None}
+    
+    result = await query_workiq(request.question, request.cache_key)
+    return result
 
 
 class ScenarioAnalysisRequest(BaseModel):
@@ -1324,10 +1472,384 @@ def _extract_citations(text: str) -> tuple:
     return text, citations
 
 
+class MCPQueryError(Exception):
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        self.reason = reason
+
+
+def _load_sage_kb_mcp_config_from_workspace() -> Dict[str, Any]:
+    workspace_mcp = Path(__file__).resolve().parent.parent / ".vscode" / "mcp.json"
+    try:
+        with open(workspace_mcp, "r", encoding="utf-8") as f:
+            config = json.load(f)
+        server = config.get("servers", {}).get("sage-advisor-kb", {})
+        headers = server.get("headers", {}) if isinstance(server.get("headers", {}), dict) else {}
+        return {
+            "url": server.get("url", ""),
+            "api_key": headers.get("api-key", ""),
+        }
+    except Exception:
+        return {"url": "", "api_key": ""}
+
+
+def _get_sage_kb_mcp_config() -> Dict[str, Any]:
+    workspace_config = _load_sage_kb_mcp_config_from_workspace()
+    timeout_default = 8.0
+    try:
+        timeout_default = float(os.environ.get("SAGE_KB_MCP_TIMEOUT_SECONDS", "8"))
+    except ValueError:
+        timeout_default = 8.0
+
+    retry_default = 1
+    try:
+        retry_default = max(0, int(os.environ.get("SAGE_KB_MCP_RETRIES", "1")))
+    except ValueError:
+        retry_default = 1
+
+    return {
+        "url": os.environ.get("SAGE_KB_MCP_URL", workspace_config.get("url", "")),
+        "api_key": os.environ.get("SAGE_KB_MCP_API_KEY", workspace_config.get("api_key", "")),
+        "timeout_seconds": timeout_default,
+        "tool_name": os.environ.get("SAGE_KB_MCP_TOOL_NAME", "knowledge_base_retrieve"),
+        "retries": retry_default,
+    }
+
+
+def _build_mcp_tool_arguments(
+    tool_name: str,
+    message: str,
+    advisor_id: str,
+    context: Optional[Dict[str, Any]],
+    compact_history: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    if tool_name == "knowledge_base_retrieve":
+        intents = [message]
+        topic = (context or {}).get("topic") if isinstance(context, dict) else None
+        if isinstance(topic, str) and topic.strip() and topic.strip().lower() != message.strip().lower():
+            intents.append(topic.strip())
+        return {
+            "request": {
+                "knowledgeBaseIntents": intents[:3],
+            }
+        }
+
+    return {
+        "query": message,
+        "advisor_id": advisor_id,
+        "context": context or {},
+        "history": compact_history,
+    }
+
+
+def _normalize_mcp_citations(raw_payload: Any) -> List[Dict[str, Any]]:
+    if not isinstance(raw_payload, list):
+        return []
+
+    citations: List[Dict[str, Any]] = []
+    for item in raw_payload:
+        if isinstance(item, str):
+            citations.append({"title": item, "source": ""})
+            continue
+
+        if not isinstance(item, dict):
+            continue
+
+        source = item.get("source") or item.get("url") or item.get("link") or ""
+        title = item.get("title") or item.get("name") or source or "Reference"
+        citation = {
+            "id": item.get("id", ""),
+            "title": title,
+            "source": source,
+            "description": item.get("description", ""),
+            "jurisdiction": item.get("jurisdiction", ""),
+            "category": item.get("category", ""),
+            "values": item.get("values", {}),
+            "last_verified": item.get("last_verified", ""),
+        }
+        citations.append(citation)
+
+    return citations
+
+
+def _build_mcp_ref_context_map(response_text: str) -> Dict[str, List[str]]:
+    context_map: Dict[str, List[str]] = {}
+    if not isinstance(response_text, str) or not response_text.strip():
+        return context_map
+
+    fragments = re.split(r"(?<=[.!?])\s+", response_text)
+    marker_pattern = re.compile(r"\[ref_id\s*:\s*(\d+)\]", flags=re.IGNORECASE)
+
+    for fragment in fragments:
+        if not isinstance(fragment, str) or not fragment.strip():
+            continue
+
+        fragment_ref_ids: List[str] = []
+        for match in marker_pattern.finditer(fragment):
+            rid = match.group(1)
+            if rid not in fragment_ref_ids:
+                fragment_ref_ids.append(rid)
+
+        if not fragment_ref_ids:
+            continue
+
+        cleaned_fragment = marker_pattern.sub("", fragment)
+        cleaned_fragment = re.sub(r"\s+", " ", cleaned_fragment).strip()
+        if not cleaned_fragment:
+            continue
+
+        for rid in fragment_ref_ids:
+            contexts = context_map.setdefault(rid, [])
+            if cleaned_fragment not in contexts:
+                contexts.append(cleaned_fragment)
+
+    return context_map
+
+
+def _normalize_mcp_response(raw_response: Any) -> Dict[str, Any]:
+    if not isinstance(raw_response, dict):
+        raise MCPQueryError("mcp_invalid_response")
+
+    result = raw_response.get("result", raw_response)
+    if not isinstance(result, dict):
+        raise MCPQueryError("mcp_invalid_result")
+
+    text_candidates: List[str] = []
+    for field in ["response", "answer", "text", "output", "message"]:
+        value = result.get(field)
+        if isinstance(value, str) and value.strip():
+            text_candidates.append(value.strip())
+
+    content = result.get("content")
+    if isinstance(content, list):
+        parts: List[str] = []
+        for chunk in content:
+            if isinstance(chunk, dict):
+                chunk_text = chunk.get("text")
+                if isinstance(chunk_text, str) and chunk_text.strip():
+                    parts.append(chunk_text.strip())
+            elif isinstance(chunk, str) and chunk.strip():
+                parts.append(chunk.strip())
+        if parts:
+            text_candidates.append("\n".join(parts))
+
+    data = result.get("data")
+    if isinstance(data, dict):
+        for field in ["response", "answer", "text", "output"]:
+            value = data.get(field)
+            if isinstance(value, str) and value.strip():
+                text_candidates.append(value.strip())
+
+    response_text = text_candidates[0].strip() if text_candidates else ""
+    if not response_text:
+        raise MCPQueryError("mcp_empty_response")
+
+    no_answer_markers = [
+        "sorry, i could not find an answer for your query",
+        "i could not find an answer for your query",
+        "no relevant information found",
+    ]
+    lowered = response_text.lower()
+    if any(marker in lowered for marker in no_answer_markers):
+        raise MCPQueryError("mcp_no_answer")
+
+    raw_citations = result.get("citations")
+    if raw_citations is None and isinstance(data, dict):
+        raw_citations = data.get("citations") or data.get("sources") or data.get("references")
+    if raw_citations is None:
+        raw_citations = result.get("sources") or result.get("references")
+
+    citations = _normalize_mcp_citations(raw_citations)
+
+    # Some MCP responses return inline markers like [ref_id:0] without citation metadata.
+    # Convert them into the existing [REF:id] pattern and synthesize lightweight citations
+    # so the current frontend can render citation chips and Foundry IQ attribution.
+    if not citations:
+        ref_ids = []
+        for match in re.findall(r"\[ref_id\s*:\s*(\d+)\]", response_text, flags=re.IGNORECASE):
+            if match not in ref_ids:
+                ref_ids.append(match)
+
+        if ref_ids:
+            context_map = _build_mcp_ref_context_map(response_text)
+
+            for rid in ref_ids:
+                response_text = re.sub(
+                    rf"\[ref_id\s*:\s*{re.escape(rid)}\]",
+                    f"[REF:mcp-ref-{rid}]",
+                    response_text,
+                    flags=re.IGNORECASE,
+                )
+
+            citations = []
+            for index, rid in enumerate(ref_ids, start=1):
+                contexts = context_map.get(rid, [])
+
+                if contexts:
+                    title = contexts[0]
+                    if len(title) > 90:
+                        title = f"{title[:89]}…"
+                else:
+                    title = f"MCP Reference {index}"
+
+                if contexts:
+                    description = " ".join(contexts[:2]).strip()
+                else:
+                    description = "Reference marker provided by MCP response."
+
+                citations.append(
+                    {
+                        "id": f"mcp-ref-{rid}",
+                        "title": title,
+                        "source": "",
+                        "description": description,
+                        "jurisdiction": "",
+                        "category": "",
+                        "values": {},
+                        "last_verified": "",
+                    }
+                )
+
+    return {"response": response_text, "citations": citations}
+
+
+def _execute_mcp_request(url: str, api_key: str, timeout_seconds: float, payload: Dict[str, Any]) -> Dict[str, Any]:
+    body = json.dumps(payload).encode("utf-8")
+    req = urllib_request.Request(url=url, data=body, method="POST")
+    req.add_header("Content-Type", "application/json")
+    req.add_header("Accept", "application/json, text/event-stream")
+    if api_key:
+        req.add_header("api-key", api_key)
+
+    try:
+        with urllib_request.urlopen(req, timeout=timeout_seconds) as response:
+            raw = response.read().decode("utf-8", errors="ignore")
+    except urllib_error.HTTPError as e:
+        body_text = ""
+        try:
+            body_text = e.read().decode("utf-8", errors="ignore")
+        except Exception:
+            body_text = ""
+        raise MCPQueryError(f"mcp_http_{e.code}:{body_text[:200]}")
+
+    stripped = raw.strip()
+    for line in stripped.splitlines():
+        if line.startswith("data:"):
+            stripped = line[5:].strip()
+            break
+
+    parsed = json.loads(stripped) if stripped else {}
+    if not isinstance(parsed, dict):
+        raise MCPQueryError("mcp_non_json_object")
+    if parsed.get("error"):
+        raise MCPQueryError("mcp_error")
+    return parsed
+
+
+async def _query_sage_kb_mcp(
+    message: str,
+    advisor_id: str,
+    context: Optional[Dict[str, Any]] = None,
+    history: Optional[List[Any]] = None,
+) -> Dict[str, Any]:
+    config = _get_sage_kb_mcp_config()
+    url = config.get("url", "")
+    api_key = config.get("api_key", "")
+    timeout_seconds = float(config.get("timeout_seconds", 4.0))
+    tool_name = config.get("tool_name", "knowledge_base_retrieve")
+    retries = int(config.get("retries", 1))
+
+    if not url:
+        raise MCPQueryError("mcp_not_configured")
+
+    compact_history = []
+    if history:
+        for msg in history[-6:]:
+            role = getattr(msg, "role", None)
+            content = getattr(msg, "content", None)
+            if role and content:
+                compact_history.append({"role": role, "content": content})
+
+    payloads = [
+        {
+            "jsonrpc": "2.0",
+            "id": "sage-kb-1",
+            "method": "tools/call",
+            "params": {
+                "name": tool_name,
+                "arguments": _build_mcp_tool_arguments(
+                    tool_name=tool_name,
+                    message=message,
+                    advisor_id=advisor_id,
+                    context=context,
+                    compact_history=compact_history,
+                ),
+            },
+        },
+    ]
+
+    started = time.perf_counter()
+    last_error = "mcp_unavailable"
+
+    for payload in payloads:
+        for attempt in range(retries + 1):
+            try:
+                raw = await asyncio.to_thread(
+                    _execute_mcp_request,
+                    url,
+                    api_key,
+                    timeout_seconds,
+                    payload,
+                )
+                normalized = _normalize_mcp_response(raw)
+                latency_ms = int((time.perf_counter() - started) * 1000)
+                normalized["latency_ms"] = latency_ms
+                return normalized
+            except (urllib_error.URLError, TimeoutError):
+                last_error = "mcp_transport_error"
+                if attempt < retries:
+                    await asyncio.sleep(0.25)
+                    continue
+            except json.JSONDecodeError:
+                last_error = "mcp_invalid_json"
+            except MCPQueryError as e:
+                last_error = e.reason
+            except Exception:
+                last_error = "mcp_unknown_error"
+            break
+
+    raise MCPQueryError(last_error)
+
+
 @app.post("/advisor/chat")
 async def advisor_chat(request: AdvisorChatRequest):
     """Non-streaming advisor chat with real LLM and enriched context."""
     try:
+        if not request.skip_mcp:
+            try:
+                mcp_result = await _query_sage_kb_mcp(
+                    message=request.message,
+                    advisor_id=request.advisor_id,
+                    context=request.context,
+                    history=request.history,
+                )
+                print(f"Advisor chat MCP success: latency={mcp_result.get('latency_ms', -1)}ms")
+                return {
+                    "response": mcp_result["response"],
+                    "citations": mcp_result.get("citations", []),
+                }
+            except MCPQueryError as mcp_error:
+                print(f"Advisor chat MCP fallback: reason={mcp_error.reason}")
+        else:
+            print("Advisor chat: skip_mcp=true, using AI agent directly")
+
+        # Check if agent is available for fallback
+        if not AGENT_AVAILABLE:
+            raise HTTPException(
+                status_code=503,
+                detail="AI agent service is temporarily unavailable (tenant configuration issue). Please try again later."
+            )
+
         system_prompt = await _build_advisor_context(request.advisor_id)
 
         # Create a dedicated thread for this advisor conversation
@@ -1385,6 +1907,44 @@ async def advisor_chat(request: AdvisorChatRequest):
 async def advisor_chat_stream(request: AdvisorChatRequest):
     """Streaming advisor chat — sends SSE events with type 'content' and 'complete'."""
     try:
+        if not request.skip_mcp:
+            try:
+                mcp_result = await _query_sage_kb_mcp(
+                    message=request.message,
+                    advisor_id=request.advisor_id,
+                    context=request.context,
+                    history=request.history,
+                )
+                print(f"Advisor chat stream MCP success: latency={mcp_result.get('latency_ms', -1)}ms")
+
+                async def generate_mcp():
+                    response_text = mcp_result["response"]
+                    citations = mcp_result.get("citations", [])
+                    chunk_size = 240
+                    for idx in range(0, len(response_text), chunk_size):
+                        chunk = response_text[idx:idx + chunk_size]
+                        if chunk:
+                            yield f"data: {json.dumps({'type': 'content', 'data': chunk})}\n\n"
+                            await asyncio.sleep(0)
+                    yield f"data: {json.dumps({'type': 'complete', 'data': {'response': response_text, 'citations': citations}})}\n\n"
+
+                return StreamingResponse(
+                    generate_mcp(),
+                    media_type="text/event-stream",
+                    headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
+                )
+            except MCPQueryError as mcp_error:
+                print(f"Advisor chat stream MCP fallback: reason={mcp_error.reason}")
+        else:
+            print("Advisor chat stream: skip_mcp=true, using AI agent directly")
+
+        # Check if agent is available for fallback
+        if not AGENT_AVAILABLE:
+            raise HTTPException(
+                status_code=503,
+                detail="AI agent service is temporarily unavailable (tenant configuration issue). Please try again later."
+            )
+
         system_prompt = await _build_advisor_context(request.advisor_id)
 
         # Create a dedicated thread for this advisor conversation
@@ -1507,6 +2067,103 @@ async def evaluate_run(thread_id: str, run_id: str):
 @app.post("/chat/stream")
 async def chat_stream(request: ChatRequest):
   """Streaming chat endpoint with real-time status updates"""
+  use_fabric = (request.data_source == "fabric")
+
+  # ── Fabric-only streaming path ─────────────────────────────────────────
+  if use_fabric:
+      if not FABRIC_AVAILABLE:
+          raise HTTPException(
+              status_code=503,
+              detail="Fabric Data Agent is not configured. Set FABRIC_TENANT_ID, "
+                     "FABRIC_CLIENT_ID, FABRIC_CLIENT_SECRET, FABRIC_DATA_AGENT_URL, "
+                     "FABRIC_DATA_AGENT_ID in your .env file.",
+          )
+
+      async def fabric_generate_stream():
+          import time as _t
+          # 1. Query Fabric Data Agent for client/portfolio data
+          yield f"data: {json.dumps({'type': 'status', 'data': {'status': 'Querying Fabric Data Agent for client data...'}, 'timestamp': _t.time()})}\n\n"
+
+          try:
+              fabric_result = await fabric_client.query(request.message, timeout=60)
+          except Exception as e:
+              yield f"data: {json.dumps({'type': 'error', 'data': {'error': f'Fabric query failed: {e}'}, 'timestamp': _t.time()})}\n\n"
+              return
+
+          # 2. If we have an Azure AI Agent, enrich with Fabric data and run analysis
+          if AGENT_AVAILABLE:
+              yield f"data: {json.dumps({'type': 'status', 'data': {'status': 'Analyzing with AI Agent (Fabric data)...'}, 'timestamp': _t.time()})}\n\n"
+
+              profile = request.profile or SAMPLE_PROFILES[0]
+              enriched_prompt = build_fabric_enriched_prompt(
+                  request.message,
+                  fabric_result,
+                  original_profile=profile.dict() if profile else None,
+              )
+
+              # Use the same Azure AI Agent but with Fabric-enriched prompt
+              thread_id = thread_manager.get_or_create_thread("fabric_session")
+              payload = {
+                  "profile": profile.dict() if profile else {},
+                  "question": enriched_prompt,
+                  "source": "fabric",
+              }
+              agents_client.messages.create(
+                  thread_id=thread_id, role="user", content=json.dumps(payload)
+              )
+
+              event_handler = StreamingRetirementEventHandler(functions)
+              with agents_client.runs.stream(
+                  thread_id=thread_id, agent_id=agent.id, event_handler=event_handler
+              ) as stream:
+                  async def _process():
+                      for _ in stream:
+                          await asyncio.sleep(0.01)
+                  task = asyncio.create_task(_process())
+                  while not event_handler.is_complete:
+                      try:
+                          update = await asyncio.wait_for(event_handler.status_queue.get(), timeout=0.1)
+                          yield f"data: {json.dumps(update)}\n\n"
+                      except asyncio.TimeoutError:
+                          pass
+                      if task.done():
+                          break
+                  await task
+
+              response_text = event_handler._accumulated_text
+              # Parse analysis JSON from response (same logic as local path)
+              try:
+                  json_start = response_text.find('{')
+                  json_end = response_text.rfind('}') + 1
+                  if json_start != -1 and json_end > json_start:
+                      json_str = response_text[json_start:json_end]
+                      json_str = json_str.replace(',\n}', '\n}').replace(',\n]', '\n]')
+                      analysis_dict = json.loads(json_str)
+                      analysis_data = AnalysisOutput(**analysis_dict)
+                      yield f"data: {json.dumps({'type': 'analysis', 'data': {'analysis': analysis_data.model_dump()}, 'timestamp': _t.time()})}\n\n"
+                  else:
+                      yield f"data: {json.dumps({'type': 'content', 'data': {'text': response_text}, 'timestamp': _t.time()})}\n\n"
+              except Exception:
+                  yield f"data: {json.dumps({'type': 'content', 'data': {'text': response_text}, 'timestamp': _t.time()})}\n\n"
+
+          else:
+              # No AI Agent — return raw Fabric result
+              yield f"data: {json.dumps({'type': 'content', 'data': {'text': fabric_result.get('answer', '')}, 'timestamp': _t.time()})}\n\n"
+
+          yield f"data: {json.dumps({'type': 'complete', 'data': {'source': 'fabric', 'fabric_data': fabric_result.get('data')}, 'timestamp': _t.time()})}\n\n"
+
+      return StreamingResponse(
+          fabric_generate_stream(),
+          media_type="text/event-stream",
+          headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
+      )
+
+  # ── Default local path (unchanged) ─────────────────────────────────────
+  if not AGENT_AVAILABLE:
+      raise HTTPException(
+          status_code=503,
+          detail="AI agent service is temporarily unavailable (tenant configuration issue). Please try again later."
+      )
   try:
       profile = request.profile or SAMPLE_PROFILES[0]
       thread_id = thread_manager.get_or_create_thread("default_session")
@@ -1705,6 +2362,11 @@ async def chat_stream(request: ChatRequest):
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
   """Non-streaming chat endpoint for compatibility"""
+  if not AGENT_AVAILABLE:
+      raise HTTPException(
+          status_code=503,
+          detail="AI agent service is temporarily unavailable (tenant configuration issue). Please try again later."
+      )
   try:
       profile = request.profile or SAMPLE_PROFILES[0]
       thread_id = thread_manager.get_or_create_thread("default_session")
@@ -1856,6 +2518,7 @@ class ScenarioProjectionRequest(BaseModel):
     scenario_description: str
     timeframe_months: int = Field(ge=1, le=60)
     current_portfolio: Dict[str, Any]
+    data_source: Optional[str] = None  # "local" (default) or "fabric"
 
 class ScenarioProjectionResponse(BaseModel):
     projection: ProjectionResult
@@ -1972,6 +2635,41 @@ Account for the specific timeframe - don't use full annual returns for shorter p
 @app.post("/api/project-scenario", response_model=ScenarioProjectionResponse)
 async def project_scenario(request: ScenarioProjectionRequest):
     """Project portfolio changes based on a described scenario using AI analysis"""
+    use_fabric = (request.data_source == "fabric")
+
+    # ── Fabric-enriched scenario projection ──────────────────────────────
+    if use_fabric:
+        if not FABRIC_AVAILABLE:
+            raise HTTPException(
+                status_code=503,
+                detail="Fabric Data Agent is not configured.",
+            )
+        # Ask Fabric for the latest client portfolio data
+        fabric_question = (
+            f"Get the full portfolio breakdown for profile {request.profile_id}: "
+            f"accounts, holdings, total value, and risk appetite."
+        )
+        try:
+            fabric_result = await fabric_client.query(fabric_question, timeout=60)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Fabric query failed: {e}")
+
+        # Merge Fabric data with the request's current_portfolio
+        fabric_portfolio = fabric_result.get("data") or {}
+        if isinstance(fabric_portfolio, list) and len(fabric_portfolio) > 0:
+            fabric_portfolio = fabric_portfolio[0] if isinstance(fabric_portfolio[0], dict) else {}
+        merged_portfolio = {**request.current_portfolio}
+        if isinstance(fabric_portfolio, dict):
+            merged_portfolio.update(fabric_portfolio)
+
+        # Continue with the normal projection flow using merged data
+        request_dict = request.model_dump()
+        request_dict["current_portfolio"] = merged_portfolio
+        request_dict["data_source"] = "local"  # prevent recursion
+        merged_request = ScenarioProjectionRequest(**request_dict)
+        return await project_scenario(merged_request)
+
+    # ── Default local projection (unchanged) ─────────────────────────────
     try:
         # Find the profile
         profile = next(

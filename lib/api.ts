@@ -9,6 +9,9 @@ let currentApiMode: ApiMode = "mock"
 let currentBackendUrl: string = API_BASE_URL
 
 export type ApiMode = "live" | "mock"
+export type DataSourceMode = "local" | "fabric"
+
+let currentDataSource: DataSourceMode = "local"
 
 export const setApiMode = (mode: ApiMode) => {
   currentApiMode = mode
@@ -16,6 +19,14 @@ export const setApiMode = (mode: ApiMode) => {
 
 export const getApiMode = (): ApiMode => {
   return currentApiMode
+}
+
+export const setDataSourceMode = (mode: DataSourceMode) => {
+  currentDataSource = mode
+}
+
+export const getDataSourceMode = (): DataSourceMode => {
+  return currentDataSource
 }
 
 export const setBackendUrl = (url: string) => {
@@ -99,6 +110,7 @@ export interface ChatRequest {
   message: string
   profile?: UserProfile
   history: ChatMessage[]
+  data_source?: DataSourceMode
 }
 
 export interface ChatResponse {
@@ -190,6 +202,7 @@ export interface ScenarioProjectionRequest {
       allocation: number
     }>
   }
+  data_source?: DataSourceMode
 }
 
 export interface ScenarioRisk {
@@ -304,9 +317,14 @@ export async function* chatWithAssistantStreaming(request: ChatRequest): AsyncGe
   }
 
   try {
+    // Inject data_source from global state if not explicitly set
+    const enrichedRequest = {
+      ...request,
+      data_source: request.data_source ?? currentDataSource,
+    }
     const response = await makeApiCall("/chat/stream", {
       method: "POST",
-      body: JSON.stringify(request),
+      body: JSON.stringify(enrichedRequest),
     })
 
     if (!response.ok) {
@@ -456,9 +474,14 @@ export const projectScenario = async (
   }
 
   try {
+    // Inject data_source from global state if not explicitly set
+    const enrichedRequest = {
+      ...request,
+      data_source: request.data_source ?? currentDataSource,
+    }
     const response = await makeApiCall("/api/project-scenario", {
       method: "POST",
-      body: JSON.stringify(request),
+      body: JSON.stringify(enrichedRequest),
     })
 
     if (!response.ok) {
@@ -471,6 +494,35 @@ export const projectScenario = async (
       `Scenario projection failed: ${error instanceof Error ? error.message : "Unknown error"}`
     )
   }
+}
+
+// ─── Fabric Data Agent API ──────────────────────────────────────────────────
+
+export const checkFabricHealth = async (): Promise<{
+  status: string
+  message: string
+  data_agent_url?: string
+}> => {
+  try {
+    const response = await makeApiCall("/api/fabric/health", { method: "GET" })
+    return await response.json()
+  } catch {
+    return { status: "error", message: "Backend unreachable" }
+  }
+}
+
+export const queryFabricDirect = async (question: string): Promise<{
+  answer: string
+  sql_query?: string
+  data?: any
+  thread_id?: string
+}> => {
+  const response = await makeApiCall("/api/fabric/query", {
+    method: "POST",
+    body: JSON.stringify({ question }),
+  })
+  if (!response.ok) throw new Error(`Fabric query failed: ${response.status}`)
+  return await response.json()
 }
 
 // ─── Conversation Storage API ───────────────────────────────────────────────
