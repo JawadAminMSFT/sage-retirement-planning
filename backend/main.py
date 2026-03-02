@@ -119,10 +119,14 @@ ENABLE_EVALUATIONS = True  # Enable for agent evaluation feature
 DATA_DIR = Path(__file__).parent / "data"
 
 # Initialize Azure AI client
-# Use tenant-specific credential if DEMO_TENANT_ID is set, so the app works
-# even when az cli is logged into a different tenant (e.g. corporate tenant for WorkIQ)
+# In production (containers), use DefaultAzureCredential which picks up Managed Identity.
+# Locally, use AzureCliCredential with DEMO_TENANT_ID if set (for cross-tenant dev).
+environment = os.environ.get("ENVIRONMENT", "development")
 demo_tenant_id = os.environ.get("DEMO_TENANT_ID", "")
-if demo_tenant_id:
+if environment == "production":
+    print("Using DefaultAzureCredential (managed identity) for production")
+    credential = DefaultAzureCredential()
+elif demo_tenant_id:
     print(f"Using AzureCliCredential with demo tenant: {demo_tenant_id}")
     credential = AzureCliCredential(tenant_id=demo_tenant_id)
 else:
